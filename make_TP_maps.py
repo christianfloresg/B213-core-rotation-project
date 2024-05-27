@@ -9,6 +9,8 @@ from scipy.optimize import curve_fit
 from astropy.convolution import convolve, Gaussian1DKernel
 from mpl_toolkits.axes_grid1 import ImageGrid
 import math
+import shutil
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 #Astropy modules to deal with coordinates
 from astropy.wcs import WCS
@@ -19,8 +21,8 @@ from astropy.wcs import utils
 #BTS code developed by Seamus to get nice moment maps using cube masking
 #instead of sigma clippping
 
-# module_path = os.path.abspath(os.path.join('/Users/christianflores/Documents/Work/BTS-master/')) # or the path to your source code
-module_path = os.path.abspath(os.path.join('/Users/christianflores/Documents/Work/external_codes/BTS-master'))
+module_path = os.path.abspath(os.path.join('/Users/christianflores/Documents/Work/BTS-master/')) # or the path to your source code
+# module_path = os.path.abspath(os.path.join('/Users/christianflores/Documents/Work/external_codes/BTS-master'))
 sys.path.insert(0, module_path)
 import BTS
 sys.path.insert(0, module_path)
@@ -39,12 +41,21 @@ class ALMATPData:
         self.header = data_cube[0].header
         self.ppv_data = data_cube[0].data
 
+
         # If the data has a 4 dimension, turn it into 3D
         if (np.shape(data_cube[0].data)[0] == 1):
             self.ppv_data = data_cube[0].data[0, :, :, :]
 
         self.nx = self.header['NAXIS1']
         self.ny = self.header['NAXIS2']
+
+
+        try:
+            lower_idx_spw_name = self.filename.find('spw')
+            self.spw_name = self.filename[lower_idx_spw_name:lower_idx_spw_name+5]
+            print(self.spw_name)
+        except:
+            print('There is no "spw" substring in this data file, I cannot guess the molecule')
 
         try:
             self.nz = self.header['NAXIS3']
@@ -71,7 +82,7 @@ class ALMATPData:
             for ii in range(0, len(ff)):
                 ff[ii] = fr + (ii - nf + 1) * df
 
-            rest = self.accurate_reference_frequency(self.filename)  # head["RESTFRQ"]
+            rest = self.accurate_reference_frequency()  # head["RESTFRQ"]
 
             vel = (rest - ff) / rest * 299792.458
             return vel
@@ -94,33 +105,17 @@ class ALMATPData:
             print("The CTYPE3 variable in the fitsfile header does not start with F for frequency or V for velocity")
             return
 
-    def accurate_reference_frequency(self, filename):
-        if "spw17" in filename:
-            freq_rest = 2.16278749E+11  # c-C3H2
-            freq_rest = 2.16112628E+11  #
-            mole_name = "DCO+"
-
-        if "spw19" in filename:
-            freq_rest = 2.19949433E+11
-            mole_name = "SO"
-
-        if "spw21" in filename:
-            freq_rest = 2.19560353E+11
-            mole_name = "C18O"
-
-        if "spw23" in filename:
-            freq_rest = 2.30538000E+11
-            mole_name = "12CO"
-
-        if "spw25" in filename:
-            freq_rest = 2.31220768E+11
-            mole_name = "13CS"
-
-        if "spw27" in filename:
-            freq_rest = 2.31321635E+11
-            mole_name = "N2D+"
-        return float(freq_rest)  # ,mole_name
-
+    def accurate_reference_frequency(self):
+        '''
+        We take the rest frequency from a file not from the header
+        '''
+        with open('molecule_rest_freq.txt') as f:
+            file = f.readlines()
+            for lines in file:
+                if self.spw_name in lines:
+                    freq_rest =lines.split()[1]
+                    self.molec_name = lines.split()[2]
+        return float(freq_rest)
 
 def closest_idx(lst, val):
     lst = np.asarray(lst)
@@ -145,6 +140,62 @@ def get_files_in_directory(directory_path):
         return []
 
 
+def plot_moment_maps(path, filename, moment):
+    data_cube = ALMATPData(path, filename+'_mom0.fits')
+    image_mom_0 = data_cube.ppv_data
+
+    data_cube = ALMATPData(path, filename+'_mom1.fits')
+    image_mom_1 = data_cube.ppv_data
+
+    data_cube = ALMATPData(path, filename+'_mom2.fits')
+    image_mom_2 = data_cube.ppv_data
+
+
+    fig = plt.figure(figsize=(12,12))
+
+    peak = np.nanmax(image_mom_0)
+    levels = np.array([0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95])
+    levels = levels * peak
+
+    ## Moment zero
+    fig1 = fig.add_subplot(221,projection=data_cube.wcs)
+    mom0_im = fig1.imshow(image_mom_0, cmap="viridis", origin='lower')
+    # divider = make_axes_locatable(fig1)
+    # cax = divider.append_axes("right", size="5%", pad=0.05)
+    cbar = plt.colorbar(mom0_im, fraction=0.048, pad=0.04, label='Integrated Intensity (Jy/beam * km/s)')
+    contour = fig1.contour(image_mom_0, levels=levels, colors="black")
+    plt.clabel(contour, inline=True, fontsize=8)
+
+    ## Moment one
+    fig2 = fig.add_subplot(222,projection=data_cube.wcs)
+    mom1_im = fig2.imshow(image_mom_1, cmap="coolwarm", origin='lower')
+    cbar = plt.colorbar(mom1_im,fraction=0.048, pad=0.04, label='Velocity (km/s)')
+
+    fig3 = fig.add_subplot(223,projection=data_cube.wcs)
+    mom2_im = fig3.imshow(image_mom_2, cmap="seismic", origin='lower')
+    cbar = plt.colorbar(mom2_im,fraction=0.048, pad=0.04, label='Velocity width (km/s)')
+
+    fig4 = fig.add_subplot(224,projection=data_cube.wcs)
+    mom1_im = fig4.imshow(image_mom_1, cmap="coolwarm", origin='lower')
+    cbar = plt.colorbar(mom1_im, fraction=0.048, pad=0.04, label='Velocity (km/s)')
+    contour = fig4.contour(image_mom_0, levels=levels, colors="black")
+    plt.clabel(contour, inline=True, fontsize=8)
+
+
+    # contour = fig2.contour(image, levels=levels, colors="black")
+
+
+    # fig.tick_params(labelsize=12)
+    plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=0.9, wspace=0.5, hspace=0.1)
+    fig1.set_title('moment 0')
+    fig2.set_title('moment 1')
+    fig3.set_title('moment 2')
+
+    plt.suptitle(filename , fontsize=18)
+
+    fig.savefig(os.path.join('Figures',filename), bbox_inches='tight')
+    plt.show()
+    
 def make_average_spectrum_data(path, filename):
     """
     Average spectrum of the whole cube.
@@ -163,7 +214,7 @@ def plot_average_spectrum(path,filename):
     """
     spectrum, velocity = make_average_spectrum_data(path,filename)
     plt.figure()
-#     plt.title("Averaged Spectrum ("+mole_name+") @"+dir_each)
+    # plt.title("Averaged Spectrum ("+mole_name+") @"+dir_each)
     plt.xlabel("velocity [km/s]")
     plt.ylabel("Intensity")
     # Set the value for horizontal line
@@ -247,8 +298,8 @@ def find_all_spectra_for_a_molecule(folders_path):
     Find the path to all the spectra of a given molecule
     '''
     array_of_paths=[]
-    molecule = '.spw19.'
-    folder_list = next(os.walk(folders_path))[1]
+    molecule = '.spw23.'
+    folder_list = sorted(next(os.walk(folders_path))[1])
     for each_folder in folder_list:
         filenames = get_files_in_directory(os.path.join(folders_path,each_folder))
         for names in filenames:
@@ -287,13 +338,110 @@ def plot_grid_of_spectra(folders_path):
 
     plt.show()
 
+def create_moment_masking_parameterfile(source,destination,fits_file_name):
+    '''
+    Copy the parameter file needed to run BTS and create moment maps
+    Modify the files themselves so they have the appropriate input data
+    '''
+
+    cube = ALMATPData(destination,fits_file_name)
+    molecule = cube.molec_name
+
+    ### copying the file
+    moment_param_filename = destination.split('/')[-1] + '_'+molecule+'_moments.param' ## Name of the cube.param file
+    full_path_moment_param_filename = os.path.join(destination,moment_param_filename) ## full name including path
+    copy_text_files(source, full_path_moment_param_filename)
+
+    ### modifying the file
+    new_fits_path = os.path.join(destination,fits_file_name)
+    replace_line(full_path_moment_param_filename, 'data_in_file_name', new_fits_path)
+    save_folder = os.path.join('moment_maps_fits',destination.split('/')[-1])
+    output_base = os.path.join(save_folder,molecule+'_'+destination.split('/')[-1])
+    replace_line(full_path_moment_param_filename, 'output_base', output_base)
+
+
+    ### make directory to save file if it does not exist
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
+        
+    return full_path_moment_param_filename
+
+def copy_text_files(source,destination):
+    '''
+    # Copy the content of the moment masking parameter to the folder of the fits files
+    # source to destination is the folder
+    '''
+
+    try:
+        shutil.copyfile(source, destination)
+        print("File copied successfully.")
+
+    # If source and destination are same
+    except shutil.SameFileError:
+        print("Source and destination represents the same file.")
+
+    # If destination is a directory.
+    except IsADirectoryError:
+        print("Destination is a directory.")
+
+    # If there is any permission issue
+    except PermissionError:
+        print("Permission denied.")
+
+    # For other errors
+    except:
+        print("Error occurred while copying file.")
+
+
+def replace_line(file_name, key_text, new_text):
+    lines = open(file_name, 'r').readlines()
+    for count, line in enumerate(lines):
+    # for line in lines:
+        if key_text in line:
+            text_to_change = line.split()[2]
+            replaced_line = line.replace(text_to_change, new_text)
+            line_num = count
+            # print(text_to_change)
+    lines[line_num] = replaced_line
+    out = open(file_name, 'w')
+    out.writelines(lines)
+    out.close()
+
+def compute_moment_maps_for_one_molecule(folders_path='TP_FITS'):
+    '''
+    Compute moment maps for all the folders in TP FITS for a given molecule
+    The issue is that specific parameters tunning cannot be generated.
+    '''
+    array_of_paths = find_all_spectra_for_a_molecule(folders_path)
+
+    for sources in array_of_paths:
+
+        core = sources.split('/')[0]
+        folder_destination = os.path.join('TP_FITS',core)
+        name_of_fits = sources.split('/')[1]
+
+        print(folder_destination,name_of_fits)
+        filename = create_moment_masking_parameterfile(source='Fit_cube_example.param', destination=folder_destination,
+                                                       fits_file_name=name_of_fits)
+        param = BTS.read_parameters(filename)
+        # # # Run the function to make the moments using the moment-masking technique
+        BTS.make_moments(param)
+
 if __name__ == "__main__":
-    param = BTS.read_parameters("TP_FITS/M236/Fit_cube.param")
+    source ='M387'
+    plot_moment_maps(path='moment_maps_fits/'+source+'/', filename='12CO_'+source, moment=0)
 
-    print(os.getcwd())
-
-    # # Run the function to make the moments using the moment-masking technique
-    BTS.make_moments(param)
+    # plot_grid_of_spectra(folders_path='TP_FITS')
+    # compute_moment_maps_for_one_molecule(folders_path='TP_FITS')
+    # core = 'M308'
+    # folder_destination = os.path.join('TP_FITS',core)
+    # name_of_fits = 'member.uid___A001_X15aa_X2a0.M308_sci.spw21.cube.I.sd.fits'
+    # #
+    # filename = create_moment_masking_parameterfile(source='Fit_cube_example.param', destination=folder_destination,
+    #                                                fits_file_name=name_of_fits)
+    # param = BTS.read_parameters(filename)
+    # # # # Run the function to make the moments using the moment-masking technique
+    # BTS.make_moments(param)
 
     # # Using the generated mask, fit the entire datacube
     # BTS.fit_a_fits(param)
