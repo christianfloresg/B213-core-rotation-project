@@ -140,7 +140,22 @@ def get_files_in_directory(directory_path):
         return []
 
 
-def plot_moment_maps(path, filename, moment):
+def mass_produce_moment_maps(folder_fits,molecule='12CO'):
+    '''
+    Apply the plot_moment_maps(path, filename) function
+    to all the files in a folder, for  agiven molcule.
+    '''
+    folder_list = sorted(next(os.walk(folder_fits))[1])
+    print(folder_list)
+    for sources in folder_list:
+        full_folder_dir= os.path.join(folder_fits,sources)
+        # print(full_folder_dir)
+        plot_moment_maps(path=full_folder_dir, filename= molecule+'_'+sources)
+
+def plot_moment_maps(path, filename):
+    '''
+    Plot moment zero, one, and two maps in a grid
+    '''
     data_cube = ALMATPData(path, filename+'_mom0.fits')
     image_mom_0 = data_cube.ppv_data
 
@@ -293,12 +308,12 @@ def gaussian_parameters_of_spectra(velocity, spectrum, guess=[], plot=False):
 
     return popt
 
-def find_all_spectra_for_a_molecule(folders_path):
+def find_all_spectra_for_a_molecule(folders_path, spw_number='.spw27.'):
     '''
     Find the path to all the spectra of a given molecule
     '''
     array_of_paths=[]
-    molecule = '.spw23.'
+    molecule = spw_number
     folder_list = sorted(next(os.walk(folders_path))[1])
     for each_folder in folder_list:
         filenames = get_files_in_directory(os.path.join(folders_path,each_folder))
@@ -308,33 +323,47 @@ def find_all_spectra_for_a_molecule(folders_path):
     return array_of_paths
 
 
-def plot_grid_of_spectra(folders_path):
-    array_of_paths = find_all_spectra_for_a_molecule(folders_path)
+def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normalized=False):
 
-    number_of_sources = len(array_of_paths)
+    number_of_sources = len( sorted(next(os.walk(folders_path))[1]))
     grid_size = int(math.ceil(number_of_sources ** 0.5))
     fig = plt.figure(figsize=(15., 15.))
-
     grid = ImageGrid(fig, 111,  # similar to subplot(111)
                      nrows_ncols=(grid_size, grid_size),  # creates 2x2 grid of Axes
                      axes_pad=0.3, aspect=False  # pad between Axes in inch.
                      )
 
-    for ax, sources in zip(grid, array_of_paths):
-        #     for sources in array_of_paths:
-        spectrum, velocity = make_average_spectrum_data(path='TP_FITS',
-                                                        filename=sources)
+    colors=['k','C1']
+    alpha=[1,0.85]
+    line_width=[1.0,1.2]
+    counter=0
+    for molecules in spw_numbers:
+        array_of_paths = find_all_spectra_for_a_molecule(folders_path,molecules)
 
-        SNR = calculate_peak_SNR(path='TP_FITS', filename=sources)
-        ax.plot(velocity, spectrum)
-        print(abs(velocity[10] - velocity[11]))
-        ax.set_xlim(-6, 18)
-        ax.set_title(sources.split('/')[0])
+        for ax, sources in zip(grid, array_of_paths):
+            #     for sources in array_of_paths:
+            spectrum, velocity = make_average_spectrum_data(path='TP_FITS',
+                                                            filename=sources)
+            SNR = calculate_peak_SNR(path='TP_FITS', filename=sources)
+            if normalized:
+                plot = ax.plot(velocity,spectrum/np.nanmax(spectrum),color=colors[counter],alpha=alpha[counter],
+                               lw=line_width[counter])
+                ax.set_ylim(-0.4,1.3)
+            else:
+                plot = ax.plot(velocity, spectrum)
+                
+            ax.text(x=0.05, y=0.95-counter*0.1, s='SNR = ' + str(int(SNR)), ha='left', va='top',
+                    transform=ax.transAxes, size=12, color=plot[0].get_color())#'purple')
+            print(abs(velocity[10] - velocity[11]))
+            # ax.set_xlim(-6, 18)
+            ax.set_xlim(0, 12)
 
-        ax.text(x=0.05, y=0.9, s='SNR = ' + str(int(SNR)), ha='left', va='top',
-                transform=ax.transAxes, size=12, color='purple')
+            ax.set_title(sources.split('/')[0])
+        counter=counter+1
 
-    #     fig.savefig('this_spw25_n.png', bbox_inches='tight')
+    plt.suptitle('C18O vs N2D+' , fontsize=18)
+
+    fig.savefig('Figures/Grid_of_spectra_C18O_vs_N2D+.png', bbox_inches='tight')
 
     plt.show()
 
@@ -407,12 +436,12 @@ def replace_line(file_name, key_text, new_text):
     out.writelines(lines)
     out.close()
 
-def compute_moment_maps_for_one_molecule(folders_path='TP_FITS'):
+def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw27.'):
     '''
     Compute moment maps for all the folders in TP FITS for a given molecule
     The issue is that specific parameters tunning cannot be generated.
     '''
-    array_of_paths = find_all_spectra_for_a_molecule(folders_path)
+    array_of_paths = find_all_spectra_for_a_molecule(folders_path,spw_number)
 
     for sources in array_of_paths:
 
@@ -428,11 +457,11 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS'):
         BTS.make_moments(param)
 
 if __name__ == "__main__":
-    source ='M387'
-    plot_moment_maps(path='moment_maps_fits/'+source+'/', filename='12CO_'+source, moment=0)
-
-    # plot_grid_of_spectra(folders_path='TP_FITS')
-    # compute_moment_maps_for_one_molecule(folders_path='TP_FITS')
+    # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='C18O')
+    # source ='M262'
+    # plot_moment_maps(path='moment_maps_fits/'+source+'/', filename='C18O_'+source)
+    plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['.spw21.','.spw27.'],normalized=True)
+    # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw21.')
     # core = 'M308'
     # folder_destination = os.path.join('TP_FITS',core)
     # name_of_fits = 'member.uid___A001_X15aa_X2a0.M308_sci.spw21.cube.I.sd.fits'

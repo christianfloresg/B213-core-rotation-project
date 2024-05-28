@@ -24,9 +24,9 @@ noise_level                     :   0.1           ### If variable_noise = 0 then
 
 ### Moment-masking parameters
 
-velocity_channel_number         :   500            ### The number of velocity channels on either the left-hand side (number>0) or the right-hand side (number<0) of the spectrum used to calculate the noise during masking
-upper_sigma_level               :   8             ### The upper signal to noise value used for the moments masking technique
-lower_sigma_level               :   4             ### The lower signal to noise value used for the moments masking technique
+velocity_channel_number         :   200            ### The number of velocity channels on either the left-hand side (number>0) or the right-hand side (number<0) of the spectrum used to calculate the noise during masking
+upper_sigma_level               :   10             ### The upper signal to noise value used for the moments masking technique
+lower_sigma_level               :   5             ### The lower signal to noise value used for the moments masking technique
 mask_filter_size                :   3             ### The size of the box-car filter used to make the moment mask
 use_velocity_range              :   0             ### A flag which determines if moments are only calculated over a certain velocity range
 min_velocity_range              :   0           ### The minimum velocity for the velocity range moments are calculated over, if used
