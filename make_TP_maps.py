@@ -61,6 +61,7 @@ class ALMATPData:
             self.nz = self.header['NAXIS3']
             self.vel = self.get_vel(self.header)
             dv = self.vel[1] - self.vel[0]
+            print('velocity resolution', dv)
             if (dv < 0):
                 dv = dv * -1
 
@@ -150,8 +151,11 @@ def mass_produce_moment_maps(folder_fits,molecule='12CO'):
     for sources in folder_list:
         full_folder_dir= os.path.join(folder_fits,sources)
         # print(full_folder_dir)
-        plot_moment_maps(path=full_folder_dir, filename= molecule+'_'+sources)
-
+        try:
+            plot_moment_maps(path=full_folder_dir, filename= molecule+'_'+sources)
+        except IndexError as err:
+            print('map '+sources+' was not produced. Check the moment maps.')
+            
 def plot_moment_maps(path, filename):
     '''
     Plot moment zero, one, and two maps in a grid
@@ -172,9 +176,12 @@ def plot_moment_maps(path, filename):
     levels = np.array([0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95])
     levels = levels * peak
 
+    ### check if BTS produced maps or SNR too low.
+
     ## Moment zero
+    unique_moment_0_val=np.unique(image_mom_0)
     fig1 = fig.add_subplot(221,projection=data_cube.wcs)
-    mom0_im = fig1.imshow(image_mom_0, cmap="viridis", origin='lower')
+    mom0_im = fig1.imshow(image_mom_0, cmap="viridis", origin='lower',vmin=unique_moment_0_val[1])
     # divider = make_axes_locatable(fig1)
     # cax = divider.append_axes("right", size="5%", pad=0.05)
     cbar = plt.colorbar(mom0_im, fraction=0.048, pad=0.04, label='Integrated Intensity (Jy/beam * km/s)')
@@ -182,16 +189,19 @@ def plot_moment_maps(path, filename):
     plt.clabel(contour, inline=True, fontsize=8)
 
     ## Moment one
+    unique_moment_1_val=np.unique(image_mom_1)
     fig2 = fig.add_subplot(222,projection=data_cube.wcs)
-    mom1_im = fig2.imshow(image_mom_1, cmap="coolwarm", origin='lower')
+    mom1_im = fig2.imshow(image_mom_1, cmap="coolwarm", origin='lower',vmin=unique_moment_1_val[1])
     cbar = plt.colorbar(mom1_im,fraction=0.048, pad=0.04, label='Velocity (km/s)')
 
+    ##moment two
+    unique_moment_2_val=np.unique(image_mom_2)
     fig3 = fig.add_subplot(223,projection=data_cube.wcs)
-    mom2_im = fig3.imshow(image_mom_2, cmap="seismic", origin='lower')
+    mom2_im = fig3.imshow(image_mom_2, cmap="seismic", origin='lower',vmin=unique_moment_2_val[1])
     cbar = plt.colorbar(mom2_im,fraction=0.048, pad=0.04, label='Velocity width (km/s)')
 
     fig4 = fig.add_subplot(224,projection=data_cube.wcs)
-    mom1_im = fig4.imshow(image_mom_1, cmap="coolwarm", origin='lower')
+    mom1_im = fig4.imshow(image_mom_1, cmap="coolwarm", origin='lower',vmin=unique_moment_1_val[1])
     cbar = plt.colorbar(mom1_im, fraction=0.048, pad=0.04, label='Velocity (km/s)')
     contour = fig4.contour(image_mom_0, levels=levels, colors="black")
     plt.clabel(contour, inline=True, fontsize=8)
@@ -457,20 +467,22 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw
         BTS.make_moments(param)
 
 if __name__ == "__main__":
-    # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='C18O')
-    # source ='M262'
-    # plot_moment_maps(path='moment_maps_fits/'+source+'/', filename='C18O_'+source)
-    plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['.spw21.','.spw27.'],normalized=True)
-    # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw21.')
-    # core = 'M308'
+    source ='M493'
+    plot_moment_maps(path='moment_maps_fits/'+source+'/', filename='DCO+_'+source)
+
+    # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='DCO+')
+
+    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['.spw21.','.spw27.'],normalized=True)
+    # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw17.')
+
+
+    ####Run single sources
+    # core = 'M493'
     # folder_destination = os.path.join('TP_FITS',core)
-    # name_of_fits = 'member.uid___A001_X15aa_X2a0.M308_sci.spw21.cube.I.sd.fits'
-    # #
+    # name_of_fits = 'member.uid___A001_X15aa_X29e.M493_sci.spw17.cube.I.sd.fits'
     # filename = create_moment_masking_parameterfile(source='Fit_cube_example.param', destination=folder_destination,
     #                                                fits_file_name=name_of_fits)
     # param = BTS.read_parameters(filename)
-    # # # # Run the function to make the moments using the moment-masking technique
+    # # # # # # Run the function to make the moments using the moment-masking technique
     # BTS.make_moments(param)
 
-    # # Using the generated mask, fit the entire datacube
-    # BTS.fit_a_fits(param)
