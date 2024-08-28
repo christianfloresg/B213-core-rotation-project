@@ -63,7 +63,7 @@ def moment_maps_with_continuum(path, filename, skycoord_object, save_name, save=
     
 
     if save:
-        fig.savefig(os.path.join('Figures/Herschel_position',save_name), bbox_inches='tight')
+        fig.savefig(os.path.join('Figures/Herschel_position_proposal',save_name), bbox_inches='tight')
     plt.show()
 
 def mass_produce_moment_maps_with_continuum(coordinate_file, folder_fits,molecule='C18O'):
@@ -123,5 +123,5 @@ if __name__ == "__main__":
     # moment_maps_with_continuum(path='moment_maps_fits/'+source+'/', filename='C18O_'+source,save=True)
     # skycoord_object = SkyCoord('04:17:32 +27:41:35', unit=(u.hourangle, u.deg))
 
-    mass_produce_moment_maps_with_continuum(coordinate_file='Herschel_coordinates.txt',
+    mass_produce_moment_maps_with_continuum(coordinate_file='Herschel_coordinates_from_ALMA.txt',
                                             folder_fits='moment_maps_fits', molecule='C18O')
