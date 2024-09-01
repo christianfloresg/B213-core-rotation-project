@@ -64,6 +64,7 @@ class ALMATPData:
             print('velocity resolution', dv)
             if (dv < 0):
                 dv = dv * -1
+            self.velocity_resolution = dv
 
         except:
             print('This is a 2D image')
@@ -117,6 +118,18 @@ class ALMATPData:
                     freq_rest =lines.split()[1]
                     self.molec_name = lines.split()[2]
         return float(freq_rest)
+
+def molecule_to_spectral_window(molecule):
+    '''
+    We take the rest frequency from a file not from the header
+    '''
+    with open('molecule_rest_freq.txt') as f:
+        file = f.readlines()
+        for lines in file:
+            if molecule in lines:
+                freq_rest =lines.split()[1]
+                spw_name = lines.split()[0]
+    return str(spw_name), float(freq_rest)
 
 def closest_idx(lst, val):
     lst = np.asarray(lst)
@@ -318,12 +331,20 @@ def gaussian_parameters_of_spectra(velocity, spectrum, guess=[], plot=False):
 
     return popt
 
-def find_all_spectra_for_a_molecule(folders_path, spw_number='.spw27.'):
+def find_all_spectra_for_a_molecule(folders_path, spw_or_molec='.spw27.'):
     '''
     Find the path to all the spectra of a given molecule
+    you can use the spectral windown number or the molecule name - dou ke yi
+    spw_or_molec e.g., = 'spw27' or '.spw27.' or 'C18O', etc.
     '''
+
+    try:
+        spectral_window_name = molecule_to_spectral_window(spw_or_molec)[0] ## first index is spw name
+    except:
+        print('please check that your spectral window coincides with molcules in "molecule_rest_freq" file')
+
     array_of_paths=[]
-    molecule = spw_number
+    molecule = spectral_window_name
     folder_list = sorted(next(os.walk(folders_path))[1])
     for each_folder in folder_list:
         filenames = get_files_in_directory(os.path.join(folders_path,each_folder))
@@ -371,9 +392,10 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
             ax.set_title(sources.split('/')[0])
         counter=counter+1
 
-    plt.suptitle('C18O vs N2D+' , fontsize=18)
+    plt.suptitle(' vs '.join(spw_numbers) , fontsize=18)
 
-    fig.savefig('Figures/Grid_of_spectra_C18O_vs_N2D+.png', bbox_inches='tight')
+    save_fig_name = 'Grid_of_spectra_' + '_vs_'.join(spw_numbers) +'.png'
+    fig.savefig(os.path.join('Figures',save_fig_name), bbox_inches='tight')
 
     plt.show()
 
@@ -467,22 +489,22 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw
         BTS.make_moments(param)
 
 if __name__ == "__main__":
-    source ='M493'
-    plot_moment_maps(path='moment_maps_fits/'+source+'/', filename='DCO+_'+source)
 
-    # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='DCO+')
+    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['C18O','N2D+'],normalized=True)
 
-    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['.spw21.','.spw27.'],normalized=True)
-    # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw17.')
+    # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='C18O')
+    # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='C18O')
 
 
     ####Run single sources
-    # core = 'M493'
-    # folder_destination = os.path.join('TP_FITS',core)
-    # name_of_fits = 'member.uid___A001_X15aa_X29e.M493_sci.spw17.cube.I.sd.fits'
-    # filename = create_moment_masking_parameterfile(source='Fit_cube_example.param', destination=folder_destination,
-    #                                                fits_file_name=name_of_fits)
-    # param = BTS.read_parameters(filename)
-    # # # # # # Run the function to make the moments using the moment-masking technique
-    # BTS.make_moments(param)
+    core = 'M295_296_280_281'
+    folder_destination = os.path.join('TP_FITS',core)
+    name_of_fits = 'member.uid___A001_X15aa_X2b8.M295_M296_M280_M281_sci.spw17.cube.I.sd.fits'
+    filename = create_moment_masking_parameterfile(source='Fit_cube_example.param', destination=folder_destination,
+                                                   fits_file_name=name_of_fits)
+    param = BTS.read_parameters(filename)
+    # # # # # Run the function to make the moments using the moment-masking technique
+    BTS.make_moments(param)
+
+    plot_moment_maps(path='moment_maps_fits/'+core+'/', filename='DCO+_'+core)
 

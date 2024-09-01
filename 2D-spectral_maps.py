@@ -7,7 +7,7 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.visualization.wcsaxes import SphericalCircle
 from mpl_toolkits.axes_grid1 import ImageGrid
-
+from make_TP_maps import find_all_spectra_for_a_molecule
 
 def average_over_intervals(data_cube, N, M):
     """
@@ -40,7 +40,7 @@ def average_over_intervals(data_cube, N, M):
 
     return averaged_cube
 
-def create_spectral_maps(path,filename):
+def create_spectral_maps(path,filename,save=False,show=True):
     '''
     The current griding of the data is 34x32. This is inconvenient to produce the spectral map
     I will just ignore the true size and assume it is 32x32 and produce a grid of spectra of
@@ -53,29 +53,78 @@ def create_spectral_maps(path,filename):
     data_cube = ALMATPData(path, filename)
     velocity = data_cube.vel
     image = data_cube.ppv_data
+    velocity_resolution = data_cube.velocity_resolution
 
-    averaged_cube = average_over_intervals(image, N, M)
+    source_name = path.split('/')[-1]
 
-    # average_spectrum = np.nanmean(image, axis=(1, 2))
+    D, H, W = image.shape
+    averaged_pixels = 4
+    grid_size_y = H // averaged_pixels
+    grid_size_x = W // averaged_pixels
 
-    # number_of_sources = len( sorted(next(os.walk(folders_path))[1]))
-    # grid_size = int(math.ceil(number_of_sources ** 0.5))
-    # fig = plt.figure(figsize=(15., 15.))
-    # grid = ImageGrid(fig, 111,  # similar to subplot(111)
-    #                  nrows_ncols=(grid_size, grid_size),  # creates 2x2 grid of Axes
-    #                  axes_pad=0.3, aspect=False  # pad between Axes in inch.
-    #                  )
+    averaged_cube = average_over_intervals(image, averaged_pixels, averaged_pixels)
 
-    # print(np.shape(image[50,:,:]))
-    # plt.imshow(image[50,:,:])
-    # plt.show()
+    fig = plt.figure(figsize=(10., 10.))
+    grid = ImageGrid(fig, 111,  # similar to subplot(111)
+                     nrows_ncols=(grid_size_y, grid_size_x),  # creates 2x2 grid of Axes
+                     axes_pad=0.0, aspect=False  # pad between Axes in inch.
+                     )
+
+    max_value = np.nanmax(averaged_cube)
+
+    ### Because RA is defined opposite to pixels in array, this factor helps flip the x-axis of the plot
+    invert_x_axis_factor = grid_size_x - 1
+
+    if data_cube.velocity_resolution > 1:
+        velocity_limits =(-2, 17)
+    else:
+        velocity_limits = (3, 11)
+
+    for count,ax in enumerate(grid):
+        row =  count % grid_size_x
+        column = count // grid_size_y
+
+        spectrum = averaged_cube[:, invert_x_axis_factor - column, row]
+
+        plot = ax.plot(velocity, spectrum)
+
+        ax.set_xlim(velocity_limits)
+        ax.set_ylim(-1,max_value+0.5)
+
+    plt.suptitle('Source: '+source_name+' -  Molec: ' + data_cube.molec_name, fontsize=18)
+    fig.supylabel('Intensity (K)', fontsize= 14)
+    fig.supxlabel('Velocity (km/s)', fontsize= 14)
+    if save:
+        # save_path =
+        fig.savefig(os.path.join(*[save_folder,data_cube.molec_name,source_name]), bbox_inches='tight',dpi=300)
+    if show:
+        plt.show()
+
+def mass_produce_spectral_maps(folders_path,molecule='12CO'):
+    '''
+    Apply the plot_moment_maps(path, filename) function
+    to all the files in a folder, for  agiven molcule.
+    '''
+    array_of_paths = find_all_spectra_for_a_molecule(folders_path, molecule)
+
+    for source_path in array_of_paths:
+        try:
+            create_spectral_maps(path=os.path.join(folders_path,source_path.split('/')[0]),
+                             filename=source_path.split('/')[1],
+                             save=True,show=False)
+        except IndexError as err:
+            print('map '+source_path.split('/')[0]+' was not produced. Check the moment maps.')
 
 if __name__ == "__main__":
-    source ='M262'
-    folder_destination = os.path.join('TP_FITS', source)
-    name_of_fits = 'member.uid___A001_X15aa_X29e.M262_sci.spw19.cube.I.sd.fits'
 
-    # moment_maps_with_continuum(path='moment_maps_fits/'+source+'/', filename='C18O_'+source,save=True)
-    # skycoord_object = SkyCoord('04:17:32 +27:41:35', unit=(u.hourangle, u.deg))
+    save_folder = 'Figures/Spectral_maps/'
 
-    create_spectral_maps(path=folder_destination, filename=name_of_fits)
+    ### Creation of a single spectral map
+    # source ='M275'
+    # folder_destination = os.path.join('TP_FITS', source)
+    # name_of_fits = 'member.uid___A001_X15aa_X29e.M275_sci.spw17.cube.I.sd.fits'
+    # create_spectral_maps(path=folder_destination, filename=name_of_fits ,save=True)
+
+    ### Creation of a maps for all sources for a given molecule
+    folder_fits = 'TP_FITS'
+    mass_produce_spectral_maps(folder_fits, molecule='DCO+')
