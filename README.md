@@ -6,4 +6,7 @@ Nagayoshi got ALMA data, mostly TP and ACA of 28 (I believe) star-less fors in B
 Yoshito already reduced the TP data, so I am supposed to use his developed code
 to generate moment maps (zero, one, two, etc.) and eventually PV diagram to check the
 velocity gradients in these sources.
+
 Eventually, we want  to have a way of measuring rotation in such cores.
+
+When using the BTS code to create the moment maps, please remember to check line 1544 of BTS.py. Since the rest velocity of molecules in the FITS HEADER are inaccurate, the moment-masking process in BTS does not produce the correct results.
