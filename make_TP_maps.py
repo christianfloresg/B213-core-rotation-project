@@ -231,7 +231,7 @@ def plot_moment_maps(path, filename):
 
     plt.suptitle(filename , fontsize=18)
 
-    fig.savefig(os.path.join('Figures',filename), bbox_inches='tight')
+    fig.savefig(os.path.join('Figures/C18O_restricted/',filename), bbox_inches='tight')
     plt.show()
     
 def make_average_spectrum_data(path, filename):
@@ -242,7 +242,7 @@ def make_average_spectrum_data(path, filename):
     data_cube = ALMATPData(path, filename)
     velocity = data_cube.vel
     image = data_cube.ppv_data
-    average_spectrum = np.nanmedian(image, axis=(1, 2))
+    average_spectrum = np.nanmean(image, axis=(1, 2))
 
     return average_spectrum, velocity
 
@@ -250,6 +250,8 @@ def plot_average_spectrum(path,filename):
     """
     This one plots the average spectrum
     """
+    SNR = calculate_peak_SNR(path='TP_FITS', filename=filename)
+
     spectrum, velocity = make_average_spectrum_data(path,filename)
     plt.figure()
     # plt.title("Averaged Spectrum ("+mole_name+") @"+dir_each)
@@ -261,7 +263,7 @@ def plot_average_spectrum(path,filename):
 #     plt.axvline(Vsys, color='red', linestyle='--')
     plt.plot(velocity,spectrum,"-",color="black",lw=1)
     plt.tick_params(axis='both', direction='in')
-    plt.xlim(-20,20)
+    plt.xlim(2,8)
     plt.show()
 
 
@@ -288,6 +290,7 @@ def calculate_peak_SNR(path, filename, velo_limits=[-20, 20]):
 
     average_noise_images = (np.nanmean(array_of_noise_lower) + np.nanmean(array_of_noise_upper)) / 2.
 
+    print('Average noise level: ',average_noise_images)
     return round(peak_signal_in_cube / average_noise_images, 1)
 
 def func(x, *params):
@@ -354,8 +357,55 @@ def find_all_spectra_for_a_molecule(folders_path, spw_or_molec='.spw27.'):
     return array_of_paths
 
 
-def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normalized=False):
+def plot_spectra_for_a_molecule(folders_path, spw_numbers='.spw27.', normalized=False):
+    '''
+    Create the averaged spectra for all the sources for a given molecule
+    the spectra will be saved in a directrory in
+    Figures/spectra/molecule/
+    '''
+    number_of_sources = len(sorted(next(os.walk(folders_path))[1]))
 
+    colors = 'k'
+    alpha = 1
+    line_width = 1.5
+    counter = 0
+
+    array_of_paths = find_all_spectra_for_a_molecule(folders_path, spw_numbers)
+
+    for sources in array_of_paths:
+        fig = plt.figure(figsize=(7., 7.))
+
+        spectrum, velocity = make_average_spectrum_data(path='TP_FITS',
+                                                        filename=sources)
+        SNR = calculate_peak_SNR(path='TP_FITS', filename=sources)
+        if normalized:
+            plot = plt.plot(velocity, spectrum / np.nanmax(spectrum), color=colors, alpha=alpha,
+                           lw=line_width)
+            plt.ylim(-0.4, 1.3)
+        else:
+            plot = plt.plot(velocity, spectrum)
+
+        fig.text(x=0.4, y=0.93, s='SNR = ' + str(int(SNR)), ha='left', va='top',
+                 size=12, color=plot[0].get_color())  # 'purple')
+        print(abs(velocity[10] - velocity[11]))
+        # ax.set_xlim(-6, 18)
+        plt.xlim(4, 8)
+
+        save_fig_name = 'Average_spectra' + '_'+sources.split('/')[0]+ '.png'
+        save_folder = os.path.join('Figures',spw_numbers+'_spectra')
+        plt.xlabel("velocity [km/s]",size=15)
+        plt.ylabel("Intensity",size=15)
+        fig.savefig(os.path.join(save_folder, save_fig_name), bbox_inches='tight')
+        # plt.show()
+
+
+def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normalized=False):
+    '''
+    Create a grid plot with all the spectra for a series of molecules
+    You can select a single molecule or multiple to check the velocity/frequency
+    aligment of their  emission
+    The spectra are averaged over the whole map
+    '''
     number_of_sources = len( sorted(next(os.walk(folders_path))[1]))
     grid_size = int(math.ceil(number_of_sources ** 0.5))
     fig = plt.figure(figsize=(15., 15.))
@@ -387,7 +437,7 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
                     transform=ax.transAxes, size=12, color=plot[0].get_color())#'purple')
             print(abs(velocity[10] - velocity[11]))
             # ax.set_xlim(-6, 18)
-            ax.set_xlim(0, 12)
+            ax.set_xlim(4, 8)
 
             ax.set_title(sources.split('/')[0])
         counter=counter+1
@@ -490,21 +540,27 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw
 
 if __name__ == "__main__":
 
-    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['C18O','N2D+'],normalized=True)
+    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['C18O'],normalized=True)
+
+    # plot_spectra_for_a_molecule(folders_path='TP_FITS', spw_numbers='C18O',normalized=False)
+
 
     # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='C18O')
-    # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='C18O')
+    mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='C18O')
 
 
-    ####Run single sources
-    core = 'M295_296_280_281'
-    folder_destination = os.path.join('TP_FITS',core)
-    name_of_fits = 'member.uid___A001_X15aa_X2b8.M295_M296_M280_M281_sci.spw17.cube.I.sd.fits'
-    filename = create_moment_masking_parameterfile(source='Fit_cube_example.param', destination=folder_destination,
-                                                   fits_file_name=name_of_fits)
-    param = BTS.read_parameters(filename)
-    # # # # # Run the function to make the moments using the moment-masking technique
-    BTS.make_moments(param)
-
-    plot_moment_maps(path='moment_maps_fits/'+core+'/', filename='DCO+_'+core)
+    #Run single sources
+    # core = 'M275'
+    # folder_destination = os.path.join('TP_FITS',core)
+    # name_of_fits = 'member.uid___A001_X15aa_X29e.M275_sci.spw21.cube.I.sd.fits'
+    #
+    # # plot_average_spectrum(path='TP_FITS', filename=os.path.join(core,name_of_fits))
+    #
+    # filename = create_moment_masking_parameterfile(source='Fit_cube_example.param', destination=folder_destination,
+    #                                                fits_file_name=name_of_fits)
+    # param = BTS.read_parameters(filename)
+    # # # # # # Run the function to make the moments using the moment-masking technique
+    # BTS.make_moments(param)
+    #
+    # plot_moment_maps(path='moment_maps_fits/'+core+'/', filename='C18O_'+core)
 

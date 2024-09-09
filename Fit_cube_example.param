@@ -10,7 +10,7 @@ output_base                     : moment_maps_fits/M236/12CO_M236               
 
 ### Spectral fitting parameters
 
-max_peaks                       :   4             ### Maximum number of Gaussian components allowed to be considered in the fitting
+max_peaks                       :   5             ### Maximum number of Gaussian components allowed to be considered in the fitting
 max_iterations                  :   5             ### Maximum number of iterations allowed in the fitting process
 min_velocity_channels           :   5             ### Minimum number of velocity channels with emission needed for a spectrum to be fitted
 min_width_value                 :  0.5           ### Minimum value that the width of any component may have (ensure the value is in the same unit as the header)
@@ -25,12 +25,12 @@ noise_level                     :   0.1           ### If variable_noise = 0 then
 ### Moment-masking parameters
 
 velocity_channel_number         :   200            ### The number of velocity channels on either the left-hand side (number>0) or the right-hand side (number<0) of the spectrum used to calculate the noise during masking
-upper_sigma_level               :   5             ### The upper signal to noise value used for the moments masking technique
-lower_sigma_level               :   3             ### The lower signal to noise value used for the moments masking technique
-mask_filter_size                :   3             ### The size of the box-car filter used to make the moment mask
+upper_sigma_level               :   3             ### The upper signal to noise value used for the moments masking technique
+lower_sigma_level               :   2             ### The lower signal to noise value used for the moments masking technique
+mask_filter_size                :   1             ### The size of the box-car filter used to make the moment mask
 use_velocity_range              :   1             ### A flag which determines if moments are only calculated over a certain velocity range
-min_velocity_range              :   0           ### The minimum velocity for the velocity range moments are calculated over, if used
-max_velocity_range              :   10            ### The maximum velocity for the velocity range moments are calculated over, if used
+min_velocity_range              :   4           ### The minimum velocity for the velocity range moments are calculated over, if used
+max_velocity_range              :   8            ### The maximum velocity for the velocity range moments are calculated over, if used
 
 ### Flags
 
