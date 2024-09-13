@@ -280,17 +280,20 @@ def calculate_peak_SNR(path, filename, velo_limits=[-20, 20]):
     image = data_cube.ppv_data
     velocity = data_cube.vel
     peak_signal_in_cube = np.nanmax(image)
+    velocity_length = data_cube.nz
 
     val_down, val_up = velo_limits[0], velo_limits[1]
     lower_idx, upper_idx = closest_idx(velocity, val_down), closest_idx(velocity, val_up)
 
-    print(lower_idx, upper_idx)
-    array_of_noise_lower = np.nanstd(image[:lower_idx, :, :], axis=0)
-    array_of_noise_upper = np.nanstd(image[upper_idx:, :, :], axis=0)
+    # print(lower_idx, upper_idx)
+    array_of_noise_lower = np.nanstd(image[:200, :, :], axis=0)
+    array_of_noise_upper = np.nanstd(image[(velocity_length-200):, :, :], axis=0)
 
     average_noise_images = (np.nanmean(array_of_noise_lower) + np.nanmean(array_of_noise_upper)) / 2.
-
     print('Average noise level: ',average_noise_images)
+
+    # return
+
     return round(peak_signal_in_cube / average_noise_images, 1)
 
 def func(x, *params):
@@ -417,7 +420,9 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
     colors=['k','C1']
     alpha=[1,0.85]
     line_width=[1.0,1.2]
+    snr_color=['purple','orange']
     counter=0
+    grid_counter = 0
     for molecules in spw_numbers:
         array_of_paths = find_all_spectra_for_a_molecule(folders_path,molecules)
 
@@ -434,17 +439,22 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
                 plot = ax.plot(velocity, spectrum)
                 
             ax.text(x=0.05, y=0.95-counter*0.1, s='SNR = ' + str(int(SNR)), ha='left', va='top',
-                    transform=ax.transAxes, size=12, color=plot[0].get_color())#'purple')
+                    transform=ax.transAxes, size=12, color= 'purple')
+                    # transform=ax.transAxes, size=12, color=plot[0].get_color())#'purple')
             print(abs(velocity[10] - velocity[11]))
-            # ax.set_xlim(-6, 18)
-            ax.set_xlim(4, 8)
-
+            ax.set_xlim(-6, 18)
+            # ax.set_xlim(2, 10)
             ax.set_title(sources.split('/')[0])
-        counter=counter+1
 
+            if grid_counter>=20:
+                ax.set_xlabel('velocity (km/s)', fontsize=14)
+            grid_counter=grid_counter+1
+            print('counter ', grid_counter)
+
+        counter=counter+1
     plt.suptitle(' vs '.join(spw_numbers) , fontsize=18)
 
-    save_fig_name = 'Grid_of_spectra_' + '_vs_'.join(spw_numbers) +'.png'
+    save_fig_name = 'Grid_of_spectra_' + '_vs_'.join(spw_numbers) +'_.png'
     fig.savefig(os.path.join('Figures',save_fig_name), bbox_inches='tight')
 
     plt.show()
@@ -540,13 +550,13 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw
 
 if __name__ == "__main__":
 
-    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['C18O'],normalized=True)
+    plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['SO'],normalized=False)
 
     # plot_spectra_for_a_molecule(folders_path='TP_FITS', spw_numbers='C18O',normalized=False)
 
 
     # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='C18O')
-    mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='C18O')
+    # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='C18O')
 
 
     #Run single sources
