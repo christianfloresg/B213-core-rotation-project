@@ -3,7 +3,7 @@
 spw_number    freq_rest       molec_name
 spw17       2.16112628E+11    DCO+
 spw19       2.19949433E+11    SO
-spw21       2.19560353E+11    C18O
+spw21       2.195603541E+11    C18O
 spw23       2.30538000E+11    12CO
 spw25       2.31220768E+11    13CS
-spw27       2.31321635E+11    N2D+
+spw27	    2.31321917E+11    N2D+

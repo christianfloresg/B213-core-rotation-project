@@ -126,9 +126,10 @@ def molecule_to_spectral_window(molecule):
     with open('molecule_rest_freq.txt') as f:
         file = f.readlines()
         for lines in file:
-            if molecule in lines:
-                freq_rest =lines.split()[1]
-                spw_name = lines.split()[0]
+            if not lines.strip().startswith('#'):
+                if molecule in lines:
+                    freq_rest =lines.split()[1]
+                    spw_name = lines.split()[0]
     return str(spw_name), float(freq_rest)
 
 def closest_idx(lst, val):
@@ -352,6 +353,7 @@ def find_all_spectra_for_a_molecule(folders_path, spw_or_molec='.spw27.'):
 
     try:
         spectral_window_name = molecule_to_spectral_window(spw_or_molec)[0] ## first index is spw name
+        print(spectral_window_name)
     except:
         print('please check that your spectral window coincides with molcules in "molecule_rest_freq" file')
 
@@ -366,7 +368,7 @@ def find_all_spectra_for_a_molecule(folders_path, spw_or_molec='.spw27.'):
     return array_of_paths
 
 
-def plot_spectra_for_a_molecule(folders_path, spw_numbers='.spw27.', normalized=False):
+def plot_spectra_for_a_molecule(folders_path, spw_numbers=['.spw27.'], normalized=False):
     '''
     Create the averaged spectra for all the sources for a given molecule
     the spectra will be saved in a directrory in
@@ -381,31 +383,34 @@ def plot_spectra_for_a_molecule(folders_path, spw_numbers='.spw27.', normalized=
 
     array_of_paths = find_all_spectra_for_a_molecule(folders_path, spw_numbers)
 
-    for sources in array_of_paths:
-        fig = plt.figure(figsize=(7., 7.))
+    for molecules in spw_numbers:
+        array_of_paths = find_all_spectra_for_a_molecule(folders_path,molecules)
 
-        spectrum, velocity = make_average_spectrum_data(path='TP_FITS',
-                                                        filename=sources)
-        SNR = calculate_peak_SNR(path='TP_FITS', filename=sources)
-        if normalized:
-            plot = plt.plot(velocity, spectrum / np.nanmax(spectrum), color=colors, alpha=alpha,
-                           lw=line_width)
-            plt.ylim(-0.4, 1.3)
-        else:
-            plot = plt.plot(velocity, spectrum)
+        for sources in array_of_paths:
+            fig = plt.figure(figsize=(7., 7.))
 
-        fig.text(x=0.4, y=0.93, s='SNR = ' + str(int(SNR)), ha='left', va='top',
-                 size=12, color=plot[0].get_color())  # 'purple')
-        print(abs(velocity[10] - velocity[11]))
-        ax.set_xlim(-6, 18)
-        # plt.xlim(4, 8)
+            spectrum, velocity = make_average_spectrum_data(path='TP_FITS',
+                                                            filename=sources)
+            SNR = calculate_peak_SNR(path='TP_FITS', filename=sources)
+            if normalized:
+                plot = plt.plot(velocity, spectrum / np.nanmax(spectrum), color=colors, alpha=alpha,
+                               lw=line_width)
+                plt.ylim(-0.4, 1.3)
+            else:
+                plot = plt.plot(velocity, spectrum)
 
-        save_fig_name = 'Average_spectra' + '_'+sources.split('/')[0]+ '.png'
-        save_folder = os.path.join('Figures',spw_numbers+'_spectra')
-        plt.xlabel("velocity [km/s]",size=15)
-        plt.ylabel("Intensity",size=15)
-        fig.savefig(os.path.join(save_folder, save_fig_name), bbox_inches='tight')
-        # plt.show()
+            fig.text(x=0.4, y=0.93, s='SNR = ' + str(int(SNR)), ha='left', va='top',
+                     size=12, color=plot[0].get_color())  # 'purple')
+            print(abs(velocity[10] - velocity[11]))
+            ax.set_xlim(-6, 18)
+            # plt.xlim(4, 8)
+
+            save_fig_name = 'Average_spectra' + '_'+sources.split('/')[0]+ '.png'
+            save_folder = os.path.join('Figures',spw_numbers+'_spectra')
+            plt.xlabel("velocity [km/s]",size=15)
+            plt.ylabel("Intensity",size=15)
+            fig.savefig(os.path.join(save_folder, save_fig_name), bbox_inches='tight')
+            # plt.show()
 
 
 def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normalized=False):
@@ -423,9 +428,9 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
                      axes_pad=0.3, aspect=False  # pad between Axes in inch.
                      )
 
-    colors=['k','C1']
+    colors=['k','r']
     alpha=[1,0.85]
-    line_width=[1.0,1.2]
+    line_width=[0.8,1.5]
     snr_color=['purple','orange']
     counter=0
     grid_counter = 0
@@ -448,8 +453,8 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
                     transform=ax.transAxes, size=12, color= 'purple')
                     # transform=ax.transAxes, size=12, color=plot[0].get_color())#'purple')
             print(abs(velocity[10] - velocity[11]))
-            ax.set_xlim(-6, 18)
-            # ax.set_xlim(2, 10)
+            # ax.set_xlim(-6, 18)
+            ax.set_xlim(2, 10)
             ax.set_title(sources.split('/')[0])
 
             if grid_counter>=20:
@@ -460,7 +465,7 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
         counter=counter+1
     plt.suptitle(' vs '.join(spw_numbers) , fontsize=18)
 
-    save_fig_name = 'Grid_of_spectra_' + '_vs_'.join(spw_numbers) +'_.png'
+    save_fig_name = 'Grid_of_spectra_' + '_vs_'.join(spw_numbers) +'_1.png'
     fig.savefig(os.path.join('Figures',save_fig_name), bbox_inches='tight')
 
     plt.show()
@@ -556,13 +561,13 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw
 
 if __name__ == "__main__":
 
-    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['DCO+'],normalized=False)
+    plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['N2D+','C18O'],normalized=True)
 
     # plot_spectra_for_a_molecule(folders_path='TP_FITS', spw_numbers='DCO+',normalized=False)
 
 
     # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='12CO')
-    mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='12CO')
+    # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='')
 
 
     #Run single sources
