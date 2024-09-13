@@ -231,7 +231,7 @@ def plot_moment_maps(path, filename):
 
     plt.suptitle(filename , fontsize=18)
 
-    fig.savefig(os.path.join('Figures/C18O_restricted/',filename), bbox_inches='tight')
+    fig.savefig(os.path.join('Figures/12CO/',filename), bbox_inches='tight')
     plt.show()
     
 def make_average_spectrum_data(path, filename):
@@ -267,7 +267,7 @@ def plot_average_spectrum(path,filename):
     plt.show()
 
 
-def calculate_peak_SNR(path, filename, velo_limits=[-20, 20]):
+def calculate_peak_SNR(path, filename, velo_limits=[0, 12]):
     '''
     Calculates the peak SNR over the whole cube.
     It is possible to set velocity limits for the calculation
@@ -279,13 +279,19 @@ def calculate_peak_SNR(path, filename, velo_limits=[-20, 20]):
     data_cube = ALMATPData(path, filename)
     image = data_cube.ppv_data
     velocity = data_cube.vel
-    peak_signal_in_cube = np.nanmax(image)
     velocity_length = data_cube.nz
 
     val_down, val_up = velo_limits[0], velo_limits[1]
     lower_idx, upper_idx = closest_idx(velocity, val_down), closest_idx(velocity, val_up)
+    print(lower_idx, upper_idx)
+    print(val_down, val_up)
 
-    # print(lower_idx, upper_idx)
+    try:
+        peak_signal_in_cube = np.nanmax(image[lower_idx:upper_idx,:,:])
+    except:
+        peak_signal_in_cube = np.nanmax(image[upper_idx:lower_idx,:,:])
+
+
     array_of_noise_lower = np.nanstd(image[:200, :, :], axis=0)
     array_of_noise_upper = np.nanstd(image[(velocity_length-200):, :, :], axis=0)
 
@@ -391,8 +397,8 @@ def plot_spectra_for_a_molecule(folders_path, spw_numbers='.spw27.', normalized=
         fig.text(x=0.4, y=0.93, s='SNR = ' + str(int(SNR)), ha='left', va='top',
                  size=12, color=plot[0].get_color())  # 'purple')
         print(abs(velocity[10] - velocity[11]))
-        # ax.set_xlim(-6, 18)
-        plt.xlim(4, 8)
+        ax.set_xlim(-6, 18)
+        # plt.xlim(4, 8)
 
         save_fig_name = 'Average_spectra' + '_'+sources.split('/')[0]+ '.png'
         save_folder = os.path.join('Figures',spw_numbers+'_spectra')
@@ -550,13 +556,13 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw
 
 if __name__ == "__main__":
 
-    plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['SO'],normalized=False)
+    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['DCO+'],normalized=False)
 
-    # plot_spectra_for_a_molecule(folders_path='TP_FITS', spw_numbers='C18O',normalized=False)
+    # plot_spectra_for_a_molecule(folders_path='TP_FITS', spw_numbers='DCO+',normalized=False)
 
 
-    # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='C18O')
-    # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='C18O')
+    # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='12CO')
+    mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='12CO')
 
 
     #Run single sources

@@ -57,13 +57,13 @@ def moment_maps_with_continuum(path, filename, skycoord_object, save_name, save=
     s = SphericalCircle(skycoord_object, aperture_radius * u.arcsec,
                         edgecolor='white', facecolor='none',
                         transform=fig1.get_transform('fk5'))
-    fig1.add_patch(s)
+    # fig1.add_patch(s)
 
     plt.suptitle(filename , fontsize=18)
     
 
     if save:
-        fig.savefig(os.path.join('Figures/Herschel_position_proposal',save_name), bbox_inches='tight')
+        fig.savefig(os.path.join('Figures/12CO',save_name), bbox_inches='tight')
     plt.show()
 
 def mass_produce_moment_maps_with_continuum(coordinate_file, folder_fits,molecule='C18O'):
@@ -124,4 +124,4 @@ if __name__ == "__main__":
     # skycoord_object = SkyCoord('04:17:32 +27:41:35', unit=(u.hourangle, u.deg))
 
     mass_produce_moment_maps_with_continuum(coordinate_file='Herschel_coordinates_from_ALMA.txt',
-                                            folder_fits='moment_maps_fits', molecule='C18O')
+                                            folder_fits='moment_maps_fits', molecule='12CO')
