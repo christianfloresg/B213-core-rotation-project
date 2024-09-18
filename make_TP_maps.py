@@ -330,8 +330,6 @@ def calculate_peak_SNR(path, filename, velo_limits=[0, 12]):
     average_noise_images = (np.nanmean(array_of_noise_lower) + np.nanmean(array_of_noise_upper)) / 2.
     print('Average noise level: ',average_noise_images)
 
-    # return
-
     return round(peak_signal_in_cube / average_noise_images, 1)
 
 def func(x, *params):
@@ -343,37 +341,6 @@ def func(x, *params):
         y = y + amp * np.exp( -((x - ctr)/wid)**2)
     return y
 
-
-def gaussian_parameters_of_spectra(velocity, spectrum, guess=[], plot=False):
-    '''
-    guess is a 3-tuple of centroid, amplitude, and width
-    Need to improve for non-overalaping centers.
-    Basically, each component is restricted in a portion
-    of the larger velocity array
-    '''
-    if guess == []:
-        guess = [7, 5, 2]
-
-    rms = np.nanstd(spectrum[10:40])
-    #     gaussian_kernel = Gaussian1DKernel(3)
-    #     smoothed_spectrum = convolve(spectrum,gaussian_kernel)
-
-    n_bound = int(len(guess) / 3.)
-    bounds = ((2, rms * 8, 1e-3) * n_bound, (10, 100, 10) * n_bound)
-
-    popt, pcov = curve_fit(func, velocity, spectrum, p0=guess, bounds=bounds)
-    average_centroid = np.nanmedian(popt[::3])
-    fit = func(velocity, *popt)
-
-    if plot:
-        #         plt.plot(velocity,smoothed_spectrum)
-        plt.plot(velocity, spectrum)
-        plt.plot(velocity, fit, 'r-')
-        plt.xlim(average_centroid - 5, average_centroid + 5)
-        #         plt.xlim(0,10)
-        plt.show()
-
-    return popt
 
 def find_the_spectrum_for_a_source(folders_path, spw_or_molec='.spw27.'):
     '''
