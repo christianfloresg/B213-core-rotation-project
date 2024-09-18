@@ -63,7 +63,7 @@ def moment_maps_with_continuum(path, filename, skycoord_object, save_name, save=
     
 
     if save:
-        fig.savefig(os.path.join('Figures/12CO',save_name), bbox_inches='tight')
+        fig.savefig(os.path.join('Figures/12CO',save_name), bbox_inches='tight',dpi=300)
     plt.show()
 
 def mass_produce_moment_maps_with_continuum(coordinate_file, folder_fits,molecule='C18O'):

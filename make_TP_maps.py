@@ -247,25 +247,56 @@ def make_average_spectrum_data(path, filename):
 
     return average_spectrum, velocity
 
-def plot_average_spectrum(path,filename):
+def plot_average_spectrum(folders_path,molecules,normalized=False,save=False):
     """
-    This one plots the average spectrum
+    This plots the average spectrum of one
+    or more molecules for a single source
+    If comparing two spectra maybe you want to normalize them
     """
-    SNR = calculate_peak_SNR(path='TP_FITS', filename=filename)
+    if isinstance(molecules, list):
+        print("The argument is already a list.")
+    elif isinstance(molecules, str):
+        print("The argument is a string. Converting it to a list.")
+        molecules = [molecules]
+    else:
+        print("The argument is neither a list nor a string.")
+        return None
 
-    spectrum, velocity = make_average_spectrum_data(path,filename)
     plt.figure()
-    # plt.title("Averaged Spectrum ("+mole_name+") @"+dir_each)
-    plt.xlabel("velocity [km/s]")
-    plt.ylabel("Intensity")
-    # Set the value for horizontal line
-    y_horizontal_line = 0
-    plt.axhline(y_horizontal_line, color='red', linestyle='-')
-#     plt.axvline(Vsys, color='red', linestyle='--')
-    plt.plot(velocity,spectrum,"-",color="black",lw=1)
-    plt.tick_params(axis='both', direction='in')
-    plt.xlim(2,8)
+
+    colors=['k','r']
+    alpha=[1,0.85]
+
+    for counter,molec in enumerate(molecules):
+        full_filename_path = find_the_spectrum_for_a_source(folders_path, molec)
+        filename = full_filename_path.split('/')
+
+        SNR = calculate_peak_SNR(folders_path, filename=filename[-1])
+
+        spectrum, velocity = make_average_spectrum_data(folders_path,filename[-1])
+
+        # plt.title("Averaged Spectrum ("+mole_name+") @"+dir_each)
+        plt.xlabel("velocity [km/s]", size=15)
+        plt.ylabel("Intensity", size=15)
+        if normalized:
+            plt.plot(velocity,spectrum/np.nanmax(spectrum),"-",color=colors[counter],lw=2,label=molec)
+        else:
+            plt.plot(velocity,spectrum,"-",color=colors[counter],lw=2)
+        plt.tick_params(axis='both', direction='in')
+        plt.xlim(3,9)
+    plt.legend()
+
+    plt.title(folders_path.split('/')[-1] , fontsize=18)
+
+    save_fig_name = 'Averaged_spectra_'+ folders_path.split('/')[-1] + '_' + '_vs_'.join(molecules) + 'ref3.png'
+    save_folder = os.path.join('Figures', 'spectra_comparison')
+    print(save_fig_name)
+    if save:
+        plt.savefig(os.path.join(save_folder, save_fig_name), bbox_inches='tight',dpi=300)
+
     plt.show()
+
+
 
 
 def calculate_peak_SNR(path, filename, velo_limits=[0, 12]):
@@ -344,6 +375,26 @@ def gaussian_parameters_of_spectra(velocity, spectrum, guess=[], plot=False):
 
     return popt
 
+def find_the_spectrum_for_a_source(folders_path, spw_or_molec='.spw27.'):
+    '''
+    Find the path to a given source and molecule
+    '''
+
+    try:
+        spectral_window_name = molecule_to_spectral_window(spw_or_molec)[0] ## first index is spw name
+        print('this is the spectral window of your molecule: ', spectral_window_name)
+    except:
+        print('please check that your spectral window coincides with molcules in "molecule_rest_freq" file')
+
+
+    filenames = get_files_in_directory(folders_path)
+
+    for names in filenames:
+        if spectral_window_name in names:
+            paths_to_molec = names
+
+    return os.path.join(folders_path,paths_to_molec)
+
 def find_all_spectra_for_a_molecule(folders_path, spw_or_molec='.spw27.'):
     '''
     Find the path to all the spectra of a given molecule
@@ -368,7 +419,7 @@ def find_all_spectra_for_a_molecule(folders_path, spw_or_molec='.spw27.'):
     return array_of_paths
 
 
-def plot_spectra_for_a_molecule(folders_path, spw_numbers=['.spw27.'], normalized=False):
+def plot_spectra_for_a_molecule(folders_path, spw_numbers='.spw27.', normalized=False):
     '''
     Create the averaged spectra for all the sources for a given molecule
     the spectra will be saved in a directrory in
@@ -383,33 +434,30 @@ def plot_spectra_for_a_molecule(folders_path, spw_numbers=['.spw27.'], normalize
 
     array_of_paths = find_all_spectra_for_a_molecule(folders_path, spw_numbers)
 
-    for molecules in spw_numbers:
-        array_of_paths = find_all_spectra_for_a_molecule(folders_path,molecules)
+    for sources in array_of_paths:
+        fig = plt.figure(figsize=(7., 7.))
 
-        for sources in array_of_paths:
-            fig = plt.figure(figsize=(7., 7.))
+        spectrum, velocity = make_average_spectrum_data(path='TP_FITS',
+                                                        filename=sources)
+        SNR = calculate_peak_SNR(path='TP_FITS', filename=sources)
+        if normalized:
+            plot = plt.plot(velocity, spectrum / np.nanmax(spectrum), color=colors, alpha=alpha,
+                           lw=line_width)
+            plt.ylim(-0.4, 1.3)
+        else:
+            plot = plt.plot(velocity, spectrum)
 
-            spectrum, velocity = make_average_spectrum_data(path='TP_FITS',
-                                                            filename=sources)
-            SNR = calculate_peak_SNR(path='TP_FITS', filename=sources)
-            if normalized:
-                plot = plt.plot(velocity, spectrum / np.nanmax(spectrum), color=colors, alpha=alpha,
-                               lw=line_width)
-                plt.ylim(-0.4, 1.3)
-            else:
-                plot = plt.plot(velocity, spectrum)
+        fig.text(x=0.4, y=0.93, s='SNR = ' + str(int(SNR)), ha='left', va='top',
+                 size=12, color=plot[0].get_color())  # 'purple')
+        print(abs(velocity[10] - velocity[11]))
+        ax.set_xlim(-6, 18)
+        # plt.xlim(4, 8)
 
-            fig.text(x=0.4, y=0.93, s='SNR = ' + str(int(SNR)), ha='left', va='top',
-                     size=12, color=plot[0].get_color())  # 'purple')
-            print(abs(velocity[10] - velocity[11]))
-            ax.set_xlim(-6, 18)
-            # plt.xlim(4, 8)
-
-            save_fig_name = 'Average_spectra' + '_'+sources.split('/')[0]+ '.png'
-            save_folder = os.path.join('Figures',spw_numbers+'_spectra')
-            plt.xlabel("velocity [km/s]",size=15)
-            plt.ylabel("Intensity",size=15)
-            fig.savefig(os.path.join(save_folder, save_fig_name), bbox_inches='tight')
+        save_fig_name = 'Average_spectra' + '_'+sources.split('/')[0]+ '.png'
+        save_folder = os.path.join('Figures',spw_numbers+'_spectra')
+        plt.xlabel("velocity [km/s]",size=15)
+        plt.ylabel("Intensity",size=15)
+        fig.savefig(os.path.join(save_folder, save_fig_name), bbox_inches='tight',dpi=300)
             # plt.show()
 
 
@@ -466,7 +514,7 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
     plt.suptitle(' vs '.join(spw_numbers) , fontsize=18)
 
     save_fig_name = 'Grid_of_spectra_' + '_vs_'.join(spw_numbers) +'_1.png'
-    fig.savefig(os.path.join('Figures',save_fig_name), bbox_inches='tight')
+    fig.savefig(os.path.join('Figures',save_fig_name),bbox_inches='tight',dpi=300)
 
     plt.show()
 
@@ -561,7 +609,7 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw
 
 if __name__ == "__main__":
 
-    plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['N2D+','C18O'],normalized=True)
+    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['N2D+','C18O'],normalized=True)
 
     # plot_spectra_for_a_molecule(folders_path='TP_FITS', spw_numbers='DCO+',normalized=False)
 
@@ -569,13 +617,19 @@ if __name__ == "__main__":
     # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='12CO')
     # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='')
 
+    ##plot spectrum
 
+    # core = 'M308'
+    plot_average_spectrum(folders_path='TP_FITS/M308', molecules=['N2D+','C18O'],
+                          normalized=True,save=True)
+
+    # find_the_spectrum_for_a_source(folders_path='TP_FITS/M308/', spw_or_molec='N2D+')
+    
     #Run single sources
     # core = 'M275'
     # folder_destination = os.path.join('TP_FITS',core)
     # name_of_fits = 'member.uid___A001_X15aa_X29e.M275_sci.spw21.cube.I.sd.fits'
     #
-    # # plot_average_spectrum(path='TP_FITS', filename=os.path.join(core,name_of_fits))
     #
     # filename = create_moment_masking_parameterfile(source='Fit_cube_example.param', destination=folder_destination,
     #                                                fits_file_name=name_of_fits)
@@ -584,4 +638,7 @@ if __name__ == "__main__":
     # BTS.make_moments(param)
     #
     # plot_moment_maps(path='moment_maps_fits/'+core+'/', filename='C18O_'+core)
+
+
+
 
