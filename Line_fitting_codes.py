@@ -13,6 +13,7 @@ from scipy.signal import correlate
 def convolution_functions(folders_path,molecules,save=False):
     """
     Convolve functions to find best center
+    NOT QUITE WORKING YET
     """
 
     if isinstance(molecules, list):
