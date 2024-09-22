@@ -235,7 +235,7 @@ def plot_moment_maps(path, filename):
     fig.savefig(os.path.join('Figures/12CO/',filename), bbox_inches='tight')
     plt.show()
     
-def make_average_spectrum_data(path, filename):
+def make_average_spectrum_data(path, filename,binning=1):
     """
     Average spectrum of the whole cube.
     """
@@ -243,6 +243,11 @@ def make_average_spectrum_data(path, filename):
     data_cube = ALMATPData(path, filename)
     velocity = data_cube.vel
     image = data_cube.ppv_data
+
+    if binning>1:
+        image = average_over_n_first_axis(image,binning)
+        velocity = average_over_n_first_axis(velocity,binning)
+    
     average_spectrum = np.nanmean(image, axis=(1, 2))
 
     return average_spectrum, velocity
@@ -297,9 +302,7 @@ def plot_average_spectrum(folders_path,molecules,normalized=False,save=False):
     plt.show()
 
 
-
-
-def calculate_peak_SNR(path, filename, velo_limits=[0, 12]):
+def calculate_peak_SNR(path, filename, velo_limits=[2, 10], binning=1):
     '''
     Calculates the peak SNR over the whole cube.
     It is possible to set velocity limits for the calculation
@@ -313,6 +316,11 @@ def calculate_peak_SNR(path, filename, velo_limits=[0, 12]):
     velocity = data_cube.vel
     velocity_length = data_cube.nz
 
+    if binning>1:
+        image = average_over_n_first_axis(image,binning)
+        velocity = average_over_n_first_axis(velocity,binning)
+        velocity_length = len(velocity)
+
     val_down, val_up = velo_limits[0], velo_limits[1]
     lower_idx, upper_idx = closest_idx(velocity, val_down), closest_idx(velocity, val_up)
     print(lower_idx, upper_idx)
@@ -324,22 +332,15 @@ def calculate_peak_SNR(path, filename, velo_limits=[0, 12]):
         peak_signal_in_cube = np.nanmax(image[upper_idx:lower_idx,:,:])
 
 
-    array_of_noise_lower = np.nanstd(image[:200, :, :], axis=0)
-    array_of_noise_upper = np.nanstd(image[(velocity_length-200):, :, :], axis=0)
+    ### define the channels to calculate the nouse to be 15% of the band on each side
+    n_channels_noise = int(velocity_length*0.15)
+    array_of_noise_lower = np.nanstd(image[:n_channels_noise, :, :], axis=0)
+    array_of_noise_upper = np.nanstd(image[(velocity_length-n_channels_noise):, :, :], axis=0)
 
     average_noise_images = (np.nanmean(array_of_noise_lower) + np.nanmean(array_of_noise_upper)) / 2.
     print('Average noise level: ',average_noise_images)
 
     return round(peak_signal_in_cube / average_noise_images, 1)
-
-def func(x, *params):
-    y = np.zeros_like(x)
-    for i in range(0, len(params), 3):
-        ctr = params[i]
-        amp = params[i+1]
-        wid = params[i+2]
-        y = y + amp * np.exp( -((x - ctr)/wid)**2)
-    return y
 
 
 def find_the_spectrum_for_a_source(folders_path, spw_or_molec='.spw27.'):
@@ -428,7 +429,49 @@ def plot_spectra_for_a_molecule(folders_path, spw_numbers='.spw27.', normalized=
             # plt.show()
 
 
-def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normalized=False):
+def average_over_n_first_axis(arr, n):
+    # Get the shape of the input array
+    shape = arr.shape
+    first_dim = shape[0]
+
+    # Calculate how many full groups of n elements we can make along the first axis
+    full_groups = first_dim // n
+    remainder = first_dim % n
+
+    # Reshape the array to group the first axis in chunks of n
+    if full_groups > 0:
+        reshaped_arr = arr[:full_groups * n].reshape(-1, n, *shape[1:])
+        averaged_arr = reshaped_arr.mean(axis=1)
+    else:
+        averaged_arr = np.empty((0, *shape[1:]))
+
+    # Handle the remaining elements along the first axis (if any)
+    if remainder > 0:
+        remainder_avg = arr[full_groups * n:].mean(axis=0, keepdims=True)
+        averaged_arr = np.concatenate((averaged_arr, remainder_avg), axis=0)
+
+    return averaged_arr
+
+def average_over_n(arr, n):
+    # Calculate how many full groups of n elements we can make
+    full_groups = len(arr) // n
+    remainder = len(arr) % n
+
+    # Reshape the array into full groups of n elements
+    if full_groups > 0:
+        reshaped_arr = arr[:full_groups * n].reshape(-1, n)
+        averaged_arr = reshaped_arr.mean(axis=1)
+    else:
+        averaged_arr = np.array([])
+
+    # Handle the remaining elements (if any)
+    if remainder > 0:
+        remainder_avg = arr[full_groups * n:].mean()
+        averaged_arr = np.append(averaged_arr, remainder_avg)
+
+    return averaged_arr
+
+def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normalized=False,binning=1):
     '''
     Create a grid plot with all the spectra for a series of molecules
     You can select a single molecule or multiple to check the velocity/frequency
@@ -455,8 +498,10 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
         for ax, sources in zip(grid, array_of_paths):
             #     for sources in array_of_paths:
             spectrum, velocity = make_average_spectrum_data(path='TP_FITS',
-                                                            filename=sources)
-            SNR = calculate_peak_SNR(path='TP_FITS', filename=sources)
+                                                            filename=sources, binning=binning)
+
+            SNR = calculate_peak_SNR(path='TP_FITS', filename=sources, binning=binning)
+
             if normalized:
                 plot = ax.plot(velocity,spectrum/np.nanmax(spectrum),color=colors[counter],alpha=alpha[counter],
                                lw=line_width[counter])
@@ -480,8 +525,8 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
         counter=counter+1
     plt.suptitle(' vs '.join(spw_numbers) , fontsize=18)
 
-    save_fig_name = 'Grid_of_spectra_' + '_vs_'.join(spw_numbers) +'_1.png'
-    fig.savefig(os.path.join('Figures',save_fig_name),bbox_inches='tight',dpi=300)
+    # save_fig_name = 'Grid_of_spectra_' + '_vs_'.join(spw_numbers) +'_1.png'
+    # fig.savefig(os.path.join('Figures',save_fig_name),bbox_inches='tight',dpi=300)
 
     plt.show()
 
@@ -574,21 +619,18 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw
         # # # Run the function to make the moments using the moment-masking technique
         BTS.make_moments(param)
 
+
 if __name__ == "__main__":
-
-    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['N2D+','C18O'],normalized=True)
-
+    plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['SO'],normalized=False,binning=2)
     # plot_spectra_for_a_molecule(folders_path='TP_FITS', spw_numbers='DCO+',normalized=False)
-
-
     # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='12CO')
     # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='')
 
     ##plot spectrum
 
     # core = 'M308'
-    plot_average_spectrum(folders_path='TP_FITS/M308', molecules=['N2D+','C18O'],
-                          normalized=True,save=True)
+    # plot_average_spectrum(folders_path='TP_FITS/M308', molecules=['N2D+','C18O'],
+    #                       normalized=True,save=True)
 
     # find_the_spectrum_for_a_source(folders_path='TP_FITS/M308/', spw_or_molec='N2D+')
     
