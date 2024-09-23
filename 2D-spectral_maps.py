@@ -8,6 +8,7 @@ from astropy import units as u
 from astropy.visualization.wcsaxes import SphericalCircle
 from mpl_toolkits.axes_grid1 import ImageGrid
 from make_TP_maps import find_all_spectra_for_a_molecule
+from make_TP_maps import average_over_n_first_axis, find_the_spectrum_for_a_source
 
 def average_over_intervals(data_cube, N, M):
     """
@@ -40,7 +41,7 @@ def average_over_intervals(data_cube, N, M):
 
     return averaged_cube
 
-def create_spectral_maps(path,filename,save=False,show=True):
+def create_spectral_maps(path,molecule=None,filename=None,save=False,show=True,binning=1):
     '''
     The current griding of the data is 34x32. This is inconvenient to produce the spectral map
     I will just ignore the true size and assume it is 32x32 and produce a grid of spectra of
@@ -50,10 +51,21 @@ def create_spectral_maps(path,filename,save=False,show=True):
     '''
     aperture_radius = 14.3 ## A 12m antenna at 219.56 GHz or 1.365 mm produces an angular resolution of 28.6 arcsec
 
+    if molecule!=None:
+        full_filename_path = find_the_spectrum_for_a_source(path, molecule)
+        filename = full_filename_path.split('/')[-1]
+    # elif filename!=None:
+        
+
     data_cube = ALMATPData(path, filename)
     velocity = data_cube.vel
     image = data_cube.ppv_data
     velocity_resolution = data_cube.velocity_resolution
+
+    if binning>1:
+        image = average_over_n_first_axis(image,binning)
+        velocity = average_over_n_first_axis(velocity,binning)
+        velocity_resolution =velocity_resolution*binning
 
     source_name = path.split('/')[-1]
 
@@ -96,11 +108,11 @@ def create_spectral_maps(path,filename,save=False,show=True):
     fig.supxlabel('Velocity (km/s)', fontsize= 14)
     if save:
         # save_path =
-        fig.savefig(os.path.join(*[save_folder,data_cube.molec_name,source_name]), bbox_inches='tight',dpi=300)
+        fig.savefig(os.path.join(*[save_folder,data_cube.molec_name,source_name])+'_binning_'+str(binning), bbox_inches='tight',dpi=300)
     if show:
         plt.show()
 
-def mass_produce_spectral_maps(folders_path,molecule='12CO'):
+def mass_produce_spectral_maps(folders_path,molecule='12CO',binning=1):
     '''
     Apply the plot_moment_maps(path, filename) function
     to all the files in a folder, for  agiven molcule.
@@ -111,7 +123,7 @@ def mass_produce_spectral_maps(folders_path,molecule='12CO'):
         try:
             create_spectral_maps(path=os.path.join(folders_path,source_path.split('/')[0]),
                              filename=source_path.split('/')[1],
-                             save=True,show=False)
+                             save=True,show=False,binning=binning)
         except IndexError as err:
             print('map '+source_path.split('/')[0]+' was not produced. Check the moment maps.')
 
@@ -120,11 +132,11 @@ if __name__ == "__main__":
     save_folder = 'Figures/Spectral_maps/'
 
     ### Creation of a single spectral map
-    # source ='M275'
+    # source ='M490'
     # folder_destination = os.path.join('TP_FITS', source)
-    # name_of_fits = 'member.uid___A001_X15aa_X29e.M275_sci.spw17.cube.I.sd.fits'
-    # create_spectral_maps(path=folder_destination, filename=name_of_fits ,save=True)
+    # create_spectral_maps(path = 'TP_FITS/M490', molecule = 'SO' ,save=True,binning=3)
+
 
     ### Creation of a maps for all sources for a given molecule
     folder_fits = 'TP_FITS'
-    mass_produce_spectral_maps(folder_fits, molecule='DCO+')
+    mass_produce_spectral_maps(folder_fits, molecule='C18O',binning=1)

@@ -338,9 +338,39 @@ def calculate_peak_SNR(path, filename, velo_limits=[2, 10], binning=1):
     array_of_noise_upper = np.nanstd(image[(velocity_length-n_channels_noise):, :, :], axis=0)
 
     average_noise_images = (np.nanmean(array_of_noise_lower) + np.nanmean(array_of_noise_upper)) / 2.
-    print('Average noise level: ',average_noise_images)
+    print('Image average noise level: ',average_noise_images)
 
     return round(peak_signal_in_cube / average_noise_images, 1)
+
+def calculate_spectrum_SNR(velocity,spectrum,velo_limits=[3,9],binning=1):
+    '''
+    Calculate the peak SNR of a specctrum
+    '''
+
+    velocity_length = len(velocity)
+
+    if binning>1:
+        spectrum = average_over_n_first_axis(spectrum,binning)
+        velocity = average_over_n_first_axis(velocity,binning)
+        velocity_length = len(velocity)
+
+    val_down, val_up = velo_limits[0], velo_limits[1]
+    lower_idx, upper_idx = closest_idx(velocity, val_down), closest_idx(velocity, val_up)
+
+    try:
+        peak_signal_in_spectrum = np.nanmax(spectrum[lower_idx:upper_idx])
+    except:
+        peak_signal_in_spectrum = np.nanmax(spectrum[upper_idx:lower_idx])
+
+
+    ### define the channels to calculate the nouse to be 15% of the band on each side
+    n_channels_noise = int(velocity_length*0.15)
+    array_of_noise_lower = np.nanstd(spectrum[:n_channels_noise], axis=0)
+    array_of_noise_upper = np.nanstd(spectrum[(velocity_length-n_channels_noise):], axis=0)
+    average_noise_spectrum = (np.nanmean(array_of_noise_lower) + np.nanmean(array_of_noise_upper)) / 2.
+    print('Spectrum average noise level: ',average_noise_spectrum)
+
+    return round(peak_signal_in_spectrum / average_noise_spectrum, 1)
 
 
 def find_the_spectrum_for_a_source(folders_path, spw_or_molec='.spw27.'):
@@ -483,7 +513,7 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
     fig = plt.figure(figsize=(15., 15.))
     grid = ImageGrid(fig, 111,  # similar to subplot(111)
                      nrows_ncols=(grid_size, grid_size),  # creates 2x2 grid of Axes
-                     axes_pad=0.3, aspect=False  # pad between Axes in inch.
+                     axes_pad=0.3, aspect=False,share_all=True  # pad between Axes in inch.
                      )
 
     colors=['k','r']
@@ -500,7 +530,10 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
             spectrum, velocity = make_average_spectrum_data(path='TP_FITS',
                                                             filename=sources, binning=binning)
 
-            SNR = calculate_peak_SNR(path='TP_FITS', filename=sources, binning=binning)
+            peak_SNR = calculate_peak_SNR(path='TP_FITS', filename=sources, binning=binning)
+
+            spectrum_SNR = calculate_spectrum_SNR(velocity,spectrum,velo_limits=[3,9],binning=binning)
+
 
             if normalized:
                 plot = ax.plot(velocity,spectrum/np.nanmax(spectrum),color=colors[counter],alpha=alpha[counter],
@@ -508,10 +541,12 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
                 ax.set_ylim(-0.4,1.3)
             else:
                 plot = ax.plot(velocity, spectrum)
-                
-            ax.text(x=0.05, y=0.95-counter*0.1, s='SNR = ' + str(int(SNR)), ha='left', va='top',
-                    transform=ax.transAxes, size=12, color= 'purple')
-                    # transform=ax.transAxes, size=12, color=plot[0].get_color())#'purple')
+
+            ax.text(x=0.05, y=0.95-counter*0.1, s='C-SNR = ' + str(int(peak_SNR)), ha='left', va='top',
+                    transform=ax.transAxes, size=11, color= 'purple')
+            ax.text(x=0.05, y=0.80-counter*0.1, s='S-SNR = ' + str(int(spectrum_SNR)), ha='left', va='top',
+                    transform=ax.transAxes, size=11, color= 'red')
+
             print(abs(velocity[10] - velocity[11]))
             # ax.set_xlim(-6, 18)
             ax.set_xlim(2, 10)
@@ -525,8 +560,8 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
         counter=counter+1
     plt.suptitle(' vs '.join(spw_numbers) , fontsize=18)
 
-    # save_fig_name = 'Grid_of_spectra_' + '_vs_'.join(spw_numbers) +'_1.png'
-    # fig.savefig(os.path.join('Figures',save_fig_name),bbox_inches='tight',dpi=300)
+    save_fig_name = 'Grid_of_spectra_' + '_vs_'.join(spw_numbers) +'_binned_'+str(binning)+'.png'
+    fig.savefig(os.path.join('Figures/Grids/',save_fig_name),bbox_inches='tight',dpi=300)
 
     plt.show()
 
@@ -621,7 +656,7 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw
 
 
 if __name__ == "__main__":
-    plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['SO'],normalized=False,binning=2)
+    plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['13CS'],normalized=False,binning=3)
     # plot_spectra_for_a_molecule(folders_path='TP_FITS', spw_numbers='DCO+',normalized=False)
     # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='12CO')
     # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='')
