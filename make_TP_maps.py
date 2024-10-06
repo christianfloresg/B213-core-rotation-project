@@ -41,14 +41,12 @@ class ALMATPData:
         self.header = data_cube[0].header
         self.ppv_data = data_cube[0].data
 
-
         # If the data has a 4 dimension, turn it into 3D
         if (np.shape(data_cube[0].data)[0] == 1):
             self.ppv_data = data_cube[0].data[0, :, :, :]
 
         self.nx = self.header['NAXIS1']
         self.ny = self.header['NAXIS2']
-
 
         try:
             lower_idx_spw_name = self.filename.find('spw')
@@ -70,6 +68,24 @@ class ALMATPData:
             print('This is a 2D image')
 
         self.wcs = WCS(self.header)
+
+        if self.wcs.wcs.has_cd():
+            # Pixel scale from CD matrix
+            cd = self.wcs.wcs.cd
+            pixel_scale_ra = np.sqrt(cd[0, 0] ** 2 + cd[0, 1] ** 2) * 3600  # arcseconds per pixel
+            pixel_scale_dec = np.sqrt(cd[1, 0] ** 2 + cd[1, 1] ** 2) * 3600  # arcseconds per pixel
+        else:
+            # Pixel scale from CDELT values
+            pixel_scale_ra = self.wcs.wcs.cdelt[0] * 3600  # arcseconds per pixel
+            pixel_scale_dec = self.wcs.wcs.cdelt[1] * 3600  # arcseconds per pixel
+
+        # Get the number of pixels along each axis (NAXIS1 for RA, NAXIS2 for DEC)
+        # naxis1 = hdu.header['NAXIS1']  # Number of pixels in RA
+        # naxis2 = hdu.header['NAXIS2']  # Number of pixels in DEC
+
+        # Calculate the total size of the image in arcseconds
+        self.total_size_ra = abs(pixel_scale_ra) * self.nx  # Total size in RA (arcseconds)
+        self.total_size_dec = abs(pixel_scale_dec) * self.ny  # Total size in DEC (arcseconds)
 
     def get_vel(self, head):
 
@@ -302,7 +318,7 @@ def plot_average_spectrum(folders_path,molecules,normalized=False,save=False):
     plt.show()
 
 
-def calculate_peak_SNR(path, filename, velo_limits=[2, 10], binning=1):
+def calculate_peak_SNR(path, filename, velo_limits=[2, 10], binning=1, separate=False):
     '''
     Calculates the peak SNR over the whole cube.
     It is possible to set velocity limits for the calculation
@@ -340,6 +356,8 @@ def calculate_peak_SNR(path, filename, velo_limits=[2, 10], binning=1):
     average_noise_images = (np.nanmean(array_of_noise_lower) + np.nanmean(array_of_noise_upper)) / 2.
     print('Image average noise level: ',average_noise_images)
 
+    if separate:
+        return peak_signal_in_cube , average_noise_images
     return round(peak_signal_in_cube / average_noise_images, 1)
 
 def calculate_spectrum_SNR(velocity,spectrum,velo_limits=[3,9],binning=1):
