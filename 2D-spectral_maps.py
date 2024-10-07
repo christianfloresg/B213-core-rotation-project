@@ -106,6 +106,7 @@ def create_spectral_maps(path,molecule=None,filename=None,save=False,show=True,b
     plt.suptitle('Source: '+source_name+' -  Molec: ' + data_cube.molec_name, fontsize=18)
     fig.supylabel('Intensity (K)', fontsize= 14)
     fig.supxlabel('Velocity (km/s)', fontsize= 14)
+    
     if save:
         # save_path =
         fig.savefig(os.path.join(*[save_folder,data_cube.molec_name,source_name])+'_binning_'+str(binning), bbox_inches='tight',dpi=300)

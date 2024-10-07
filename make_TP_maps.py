@@ -47,7 +47,8 @@ class ALMATPData:
 
         self.nx = self.header['NAXIS1']
         self.ny = self.header['NAXIS2']
-
+        self.source_name = self.header['OBJECT']
+        
         try:
             lower_idx_spw_name = self.filename.find('spw')
             self.spw_name = self.filename[lower_idx_spw_name:lower_idx_spw_name+5]
@@ -339,8 +340,8 @@ def calculate_peak_SNR(path, filename, velo_limits=[2, 10], binning=1, separate=
 
     val_down, val_up = velo_limits[0], velo_limits[1]
     lower_idx, upper_idx = closest_idx(velocity, val_down), closest_idx(velocity, val_up)
-    print(lower_idx, upper_idx)
-    print(val_down, val_up)
+    # print(lower_idx, upper_idx)
+    # print(val_down, val_up)
 
     try:
         peak_signal_in_cube = np.nanmax(image[lower_idx:upper_idx,:,:])
