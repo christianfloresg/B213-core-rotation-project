@@ -14,7 +14,7 @@ def _arcsinh(x):
     return np.arcsinh(x)
 
 def channel_maps(path, molecule, n_channels=[3, 3], initial_vel=0, channel_step=1, nsigma=1,
-                save_folder='./', filename='default', title_image='',
+                save_folder='./', filename='default', title_image=True,
                 save=False):
     """
     Create channel maps for a given source
@@ -76,8 +76,8 @@ def channel_maps(path, molecule, n_channels=[3, 3], initial_vel=0, channel_step=
     dec = np.linspace(-dec_del / 2.0, dec_del / 2.0, cube_size_ny)
     X, Y = np.meshgrid(ra, dec)
 
-    # new_cmap = cm.gist_heat
-    new_cmap = cm.cividis
+    new_cmap = cm.gist_heat
+    # new_cmap = cm.cividis
     # new_cmap = cm.viridis
 
     norm_new = colors.FuncNorm((_arcsinh, _sinh), vmin=minimo, vmax=maximo)
@@ -128,11 +128,13 @@ def channel_maps(path, molecule, n_channels=[3, 3], initial_vel=0, channel_step=
     cbar.ax.tick_params(labelsize=20)
 
     plt.subplots_adjust(wspace=0.011, hspace=0.011)
-    fig.suptitle(str(title_image), fontsize=20)
+    source_name = data_cube.source_name
+
+    if title_image:
+        fig.suptitle(str(source_name), fontsize=30)
 
     if save:
         molecule_name = data_cube.molec_name
-        source_name = data_cube.source_name
         save_folder = 'Figures/channel_maps/'
         fig.savefig(os.path.join(*[save_folder,molecule_name,source_name])+'.pdf', bbox_inches='tight',dpi=300)
         # plt.savefig(figname, bbox_inches='tight')
@@ -172,5 +174,9 @@ if __name__ == "__main__":
     #                      n_channels=[4, 5], initial_vel=5.0, channel_step=1, nsigma=3., save=True)
 
     ### Creation of a channel maps for all sources for a given molecule
+    ### For C18O I use n_channels=[4, 5], initial_vel=4.5, channel_step=2, nsigma=5.
+    ### For N2D+ n_channels=[3, 5], initial_vel=6.2, channel_step=1, nsigma=3.
+    ### For SO n_channels=[4, 5], initial_vel=5.0, channel_step=2, nsigma=3.
+
     folder_fits = 'TP_FITS'
-    mass_produce_channel_maps(folder_fits, molecule='SO',n_channels=[4, 5], initial_vel=5.0, channel_step=2, nsigma=3.)
+    mass_produce_channel_maps(folder_fits, molecule='C18O',n_channels=[4, 5], initial_vel=4.5, channel_step=2, nsigma=5.)
