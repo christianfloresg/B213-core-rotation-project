@@ -675,16 +675,16 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw
 
 
 if __name__ == "__main__":
-    plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['13CS'],normalized=False,binning=3)
+    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['13CS'],normalized=False,binning=3)
     # plot_spectra_for_a_molecule(folders_path='TP_FITS', spw_numbers='DCO+',normalized=False)
     # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='12CO')
     # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='')
 
     ##plot spectrum
 
-    # core = 'M308'
-    # plot_average_spectrum(folders_path='TP_FITS/M308', molecules=['N2D+','C18O'],
-    #                       normalized=True,save=True)
+    core = 'M308'
+    plot_average_spectrum(folders_path='TP_FITS/M308', molecules=['C18O'],
+                          normalized=True,save=False)
 
     # find_the_spectrum_for_a_source(folders_path='TP_FITS/M308/', spw_or_molec='N2D+')
     
