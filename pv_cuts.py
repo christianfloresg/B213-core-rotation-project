@@ -73,21 +73,83 @@ def update_WCS_coordinates(initial_ww,filename):
     
     return ww
 
+def define_pv_path_from_coordinates(start_coordinate=["4h17m39s", "+27d55m12s"],
+                                    end_coordinate=["4h17m34s", "+27d56m12s"]):
+
+
+    start_point = SkyCoord(start_coordinate[0], start_coordinate[1], frame="fk5")
+    end_point = SkyCoord(end_coordinate[0], end_coordinate[1], frame="fk5")
+
+    # Create a linear path between the points
+    ra_values = [start_point.ra.deg, end_point.ra.deg]  # Convert RA to degrees
+    dec_values = [start_point.dec.deg, end_point.dec.deg]  # Convert Dec to degrees
+    # Create the Path
+    path = Path(SkyCoord(ra_values, dec_values, unit="deg", frame="fk5"), width=1 * u.arcsec)
+
+    return path
+
+def define_pv_path_from_angle(cube,angle):
+    '''
+    define a pv path based on the center of the field, and an angle
+    '''
+    # Define the angle alpha (measured north from east)
+    alpha = angle * u.deg  # Adjust angle as needed
+
+    cube_wcs = WCS(cube.header)
+    wcs = cube_wcs.wcs
+    print(cube_wcs)
+    # Get the spatial dimensions (x, y)
+    nx, ny = cube.shape[1], cube.shape[2]  # Assuming cube.shape = [x, y, spectral, ]
+    print(nx,ny,'spatial coordinates')
+
+    # Get the reference pixel for the spectral axis
+    ref_pixel_spectral = cube_wcs.wcs.crpix[2] - 1  # Subtract 1 because FITS is 1-indexed
+    print(ref_pixel_spectral,'sectral index  coordinates')
+
+    center_pixel = [nx / 2, ny / 2]  # Center pixel coordinates
+
+    world_coords_center, freq_center = cube_wcs.pixel_to_world(center_pixel[0], center_pixel[1], ref_pixel_spectral)
+
+    center_ra = world_coords_center.ra.deg
+    center_dec = world_coords_center.dec.deg
+    
+    # Convert alpha to radians
+    alpha_rad = np.deg2rad(alpha)
+
+    # Get the pixel scale in degrees
+    pixel_scale_x = np.abs(cube_wcs.wcs.cdelt[0])  # Degrees per pixel in RA
+    pixel_scale_y = np.abs(cube_wcs.wcs.cdelt[1])  # Degrees per pixel in Dec
+
+    # Calculate the diagonal distance in degrees
+    fov_diag = np.sqrt((nx * pixel_scale_x)**2 + (ny * pixel_scale_y)**2) / 2
+
+    # Calculate RA/Dec offsets
+    delta_ra = fov_diag * np.cos(alpha_rad) / np.cos(np.deg2rad(center_dec))  # Adjust for declination
+    delta_dec = fov_diag * np.sin(alpha_rad)
+
+    # Compute start and end points
+    start_ra = center_ra - delta_ra
+    start_dec = center_dec - delta_dec
+    end_ra = center_ra + delta_ra
+    end_dec = center_dec + delta_dec
+
+    # Create the Path object
+    ra_values = [start_ra.value, end_ra.value]
+    dec_values = [start_dec.value, end_dec.value]
+
+    path = Path(SkyCoord(ra_values, dec_values, unit="deg", frame="fk5"), width=1 * u.arcsec)
+
+    return path
+
 def extract_pv_cut(folder,fits_name):
 
     cube, wcs = open_fits_file(folder,fits_name)
     data = cube.unmasked_data[:].value
     # Step 2: Define the spatial path for the PV cut
     # Define start and end points of the path in celestial coordinates
-    start_point = SkyCoord("4h17m39s", "+27d55m12s", frame="fk5")
-    end_point = SkyCoord("4h17m34s", "+27d56m12s", frame="fk5")
 
-    # Create a linear path between the points
-    ra_values = [start_point.ra.deg, end_point.ra.deg]  # Convert RA to degrees
-    dec_values = [start_point.dec.deg, end_point.dec.deg]  # Convert Dec to degrees
-
-    # Create the Path
-    path = Path(SkyCoord(ra_values, dec_values, unit="deg", frame="fk5"), width=1 * u.arcsec)
+    # path = define_pv_path_from_coordinates(["4h17m39s", "+27d55m12s"],["4h17m34s", "+27d56m12s"])
+    path = define_pv_path_from_angle(cube,-42)
 
     # Step 3: Extract the PV slice
     pv_slice = extract_pv_slice(cube, path)
@@ -97,8 +159,11 @@ def extract_pv_cut(folder,fits_name):
 
     plt.figure(figsize=(12, 6))
     ax = plt.subplot(121, projection=cube.wcs.celestial)
-    ax.imshow(data[510,:,:])
-    path.show_on_axis(ax, spacing=1, color='r')
+    ax.imshow(data[0,:,:])
+    # path.show_on_axis(ax, spacing=1, color='r')
+    path.show_on_axis(ax, spacing=5,
+                          edgecolor='w', linestyle=':',
+                          linewidth=0.75)
 
     ax.set_xlabel(f"Right Ascension [{cube.wcs.wcs.radesys}]")
     ax.set_ylabel(f"Declination [{cube.wcs.wcs.radesys}]")
@@ -145,7 +210,10 @@ def extract_pv_cut(folder,fits_name):
 
 
 if __name__ == "__main__":
-    core = 'M275'
-    folder_destination = os.path.join('TP_FITS', core)
-    name_of_fits = 'member.uid___A001_X15aa_X29e.M275_sci.spw21.cube.I.sd.fits'
+    # core = 'M275'
+    # folder_destination = os.path.join('TP_FITS', core)
+    # name_of_fits = 'member.uid___A001_X15aa_X29e.M275_sci.spw21.cube.I.sd.fits'
+
+    folder_destination = 'linearfit_demo'
+    name_of_fits= 'hl_tau.h2co.contsub.selfcal.robust0.5.pbcor.subim.fits'
     extract_pv_cut(folder=folder_destination,fits_name=name_of_fits)
