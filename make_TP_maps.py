@@ -47,8 +47,7 @@ class ALMATPData:
 
         self.nx = self.header['NAXIS1']
         self.ny = self.header['NAXIS2']
-        self.source_name = self.header['OBJECT']
-        
+
         try:
             lower_idx_spw_name = self.filename.find('spw')
             self.spw_name = self.filename[lower_idx_spw_name:lower_idx_spw_name+5]
@@ -61,6 +60,8 @@ class ALMATPData:
             self.vel = self.get_vel(self.header)
             dv = self.vel[1] - self.vel[0]
             print('velocity resolution', dv)
+            self.source_name = self.header['OBJECT']
+
             if (dv < 0):
                 dv = dv * -1
             self.velocity_resolution = dv
