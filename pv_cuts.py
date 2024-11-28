@@ -87,6 +87,38 @@ def define_pv_path_from_coordinates(start_coordinate=["4h17m39s", "+27d55m12s"],
 
     return path
 
+def edge_pixel_from_angle(alpha,nx,ny):
+    '''
+    calculate the position of the edge pixel of a cube
+    let's define it east from north.
+    '''
+    x_c = nx / 2 - 0.5
+    y_c =  ny / 2 - 0.5
+
+    alpha_rad = np.pi*alpha/180.
+    if 0<=alpha<=45:
+        yf = ny +0.5
+        xf = x_c - np.tan(alpha_rad)*ny/2
+
+        y2f = 0.5
+        x2f = x_c + np.tan(alpha_rad)*ny/2
+
+    if 45<alpha<=135:
+        xf = 0.5
+        yf = y_c + nx/2 / np.tan(alpha_rad)
+
+        x2f =  nx + 0.5
+        y2f = y_c - nx/2 / np.tan(alpha_rad)
+
+    if 135<alpha<=180:
+        yf = 0.5
+        xf = x_c + np.tan(alpha_rad)*ny/2
+
+        y2f = ny + 0.5
+        x2f = x_c - np.tan(alpha_rad)*ny/2
+
+    return [xf,yf],[x2f,y2f]
+
 def define_pv_path_from_angle(cube,angle):
     '''
     define a pv path based on the center of the field, and an angle
@@ -98,45 +130,34 @@ def define_pv_path_from_angle(cube,angle):
     wcs = cube_wcs.wcs
     print(cube_wcs)
     # Get the spatial dimensions (x, y)
-    nx, ny = cube.shape[1], cube.shape[2]  # Assuming cube.shape = [x, y, spectral, ]
+    ny, nx = cube.shape[1], cube.shape[2]  # Assuming cube.shape = [x, y, spectral, ]
     print(nx,ny,'spatial coordinates')
 
     # Get the reference pixel for the spectral axis
     ref_pixel_spectral = cube_wcs.wcs.crpix[2] - 1  # Subtract 1 because FITS is 1-indexed
     print(ref_pixel_spectral,'sectral index  coordinates')
 
-    center_pixel = [nx / 2, ny / 2]  # Center pixel coordinates
+    # center_pixel = [nx / 2 - 0.5, ny / 2 -0.5]  # Center pixel coordinates | the center of the pixel is at 0.5 units
+    # world_coords_center, freq_center = cube_wcs.pixel_to_world(center_pixel[0], center_pixel[1], ref_pixel_spectral)
 
-    world_coords_center, freq_center = cube_wcs.pixel_to_world(center_pixel[0], center_pixel[1], ref_pixel_spectral)
+    edge_pixel1, edge_pixel2 = edge_pixel_from_angle(angle,nx,ny)
+    print(edge_pixel1,'edge pixels 1')
+    print(edge_pixel2,'edge pixels 2')
 
-    center_ra = world_coords_center.ra.deg
-    center_dec = world_coords_center.dec.deg
-    
-    # Convert alpha to radians
-    alpha_rad = np.deg2rad(alpha)
+    world_coords_edge1, freq_edge1 = cube_wcs.pixel_to_world(edge_pixel1[0], edge_pixel1[1], ref_pixel_spectral)
+    world_coords_edge2, freq_edge2 = cube_wcs.pixel_to_world(edge_pixel2[0], edge_pixel2[1], ref_pixel_spectral)
 
-    # Get the pixel scale in degrees
-    pixel_scale_x = np.abs(cube_wcs.wcs.cdelt[0])  # Degrees per pixel in RA
-    pixel_scale_y = np.abs(cube_wcs.wcs.cdelt[1])  # Degrees per pixel in Dec
+    edge_ra1 = world_coords_edge1.ra.deg
+    edge_dec1 = world_coords_edge1.dec.deg
 
-    # Calculate the diagonal distance in degrees
-    fov_diag = np.sqrt((nx * pixel_scale_x)**2 + (ny * pixel_scale_y)**2) / 2
-
-    # Calculate RA/Dec offsets
-    delta_ra = fov_diag * np.cos(alpha_rad) / np.cos(np.deg2rad(center_dec))  # Adjust for declination
-    delta_dec = fov_diag * np.sin(alpha_rad)
-
-    # Compute start and end points
-    start_ra = center_ra - delta_ra
-    start_dec = center_dec - delta_dec
-    end_ra = center_ra + delta_ra
-    end_dec = center_dec + delta_dec
+    edge_ra2 = world_coords_edge2.ra.deg
+    edge_dec2 = world_coords_edge2.dec.deg
 
     # Create the Path object
-    ra_values = [start_ra.value, end_ra.value]
-    dec_values = [start_dec.value, end_dec.value]
+    ra_values = [edge_ra1, edge_ra2]
+    dec_values = [edge_dec1, edge_dec2]
 
-    path = Path(SkyCoord(ra_values, dec_values, unit="deg", frame="fk5"), width=25 * u.arcsec)
+    path = Path(SkyCoord(ra_values, dec_values, unit="deg", frame="fk5"), width=28 * u.arcsec)
 
     return path
 
@@ -222,8 +243,17 @@ def plot_extraced_pv_cut(source_name,molecule,degree_angle=0):
 
 def plot_pv_and_moment_one(source_name,molecule,path,degree_angle=0):
 
-    mom_one_name = molecule+'_'+core
-    data_cube = ALMATPData(path, mom_one_name+'_mom1.fits')
+    moment_map_name = molecule+'_'+core
+
+    data_cube = ALMATPData(path, moment_map_name+'_mom0.fits')
+    image_mom_0 = data_cube.ppv_data
+    unique_moment_0_val=np.unique(image_mom_0)
+    peak = np.nanmax(image_mom_0)
+    levels = np.array([0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95])
+    levels = levels * peak
+
+
+    data_cube = ALMATPData(path, moment_map_name+'_mom1.fits')
     image_mom_1 = data_cube.ppv_data
     unique_moment_1_val=np.unique(image_mom_1)
 
@@ -233,11 +263,12 @@ def plot_pv_and_moment_one(source_name,molecule,path,degree_angle=0):
     plt.figure(figsize=(12, 6))
     ax = plt.subplot(121, projection=cube.wcs.celestial)
     moment_one_plot = ax.imshow(image_mom_1, cmap="coolwarm", origin='lower',vmin=unique_moment_1_val[1])
+    contour = ax.contour(image_mom_0, levels=levels, colors="gray",linewidths=0.7)
+    plt.clabel(contour, inline=True, fontsize=8)
 
-    # path.show_on_axis(ax, spacing=1, color='r')
     path.show_on_axis(ax, spacing=5,
-                          edgecolor='k', linestyle=':',
-                          linewidth=0.75)
+                          edgecolor='k', linestyle='--',
+                          linewidth=1)
 
     ax.set_xlabel(f"Right Ascension [{cube.wcs.wcs.radesys}]")
     ax.set_ylabel(f"Declination [{cube.wcs.wcs.radesys}]")
@@ -282,16 +313,16 @@ def plot_pv_and_moment_one(source_name,molecule,path,degree_angle=0):
     plt.colorbar(moment_one_plot, ax=ax, label="velocity")
     # plt.colorbar(pv_image, ax=ax2, label="Intensity")
 
-    plt.suptitle(source_name + ' ' + molecule, fontsize=18)
+    plt.suptitle(source_name + ' ' + molecule + '   angle_deg = ' + str(degree_angle), fontsize=18)
     plt.tight_layout()
-    plt.savefig("Figures/pv_diagrams/"+source_name+'_'+molecule+'.png', bbox_inches='tight',dpi=300)
+    plt.savefig("Figures/pv_diagrams/"+source_name+'_'+molecule+'_angle_+'+str(degree_angle)+'.png', bbox_inches='tight',dpi=300)
     plt.show()
 
 
 if __name__ == "__main__":
-    core = 'M505'
+    core = 'M236'
     molecule = 'C18O'
-    angle = 45+90
+    angle = 55 ## measured north from east
     path = os.path.join('moment_maps_fits',core)
     plot_pv_and_moment_one(core, molecule, path, degree_angle=angle)
     # plot_extraced_pv_cut(source_name=core,molecule=molecule,degree_angle=angle)

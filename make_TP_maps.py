@@ -311,7 +311,7 @@ def plot_average_spectrum(folders_path,molecules,normalized=False,save=False):
 
     plt.title(folders_path.split('/')[-1] , fontsize=18)
 
-    save_fig_name = 'Averaged_spectra_'+ folders_path.split('/')[-1] + '_' + '_vs_'.join(molecules) + 'ref3.png'
+    save_fig_name = 'Averaged_spectra_'+ folders_path.split('/')[-1] + '_' + '_vs_'.join(molecules) + '.png'
     save_folder = os.path.join('Figures', 'spectra_comparison')
     print(save_fig_name)
     if save:
@@ -536,7 +536,7 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
                      axes_pad=0.3, aspect=False,share_all=True  # pad between Axes in inch.
                      )
 
-    colors=['k','r']
+    colors=['k','orange']
     alpha=[1,0.85]
     line_width=[0.8,1.5]
     snr_color=['purple','orange']
@@ -562,10 +562,12 @@ def plot_grid_of_spectra(folders_path,spw_numbers=['.spw27.','.spw21.'],normaliz
             else:
                 plot = ax.plot(velocity, spectrum)
 
+
             ax.text(x=0.05, y=0.95-counter*0.1, s='C-SNR = ' + str(int(peak_SNR)), ha='left', va='top',
-                    transform=ax.transAxes, size=11, color= 'purple')
-            ax.text(x=0.05, y=0.80-counter*0.1, s='S-SNR = ' + str(int(spectrum_SNR)), ha='left', va='top',
-                    transform=ax.transAxes, size=11, color= 'red')
+                    transform=ax.transAxes, size=11, color= colors[counter])
+            if len(spw_numbers)==1:
+                ax.text(x=0.05, y=0.80-counter*0.1, s='S-SNR = ' + str(int(spectrum_SNR)), ha='left', va='top',
+                        transform=ax.transAxes, size=11, color= 'red')
 
             print(abs(velocity[10] - velocity[11]))
             # ax.set_xlim(-6, 18)
@@ -676,16 +678,18 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw
 
 
 if __name__ == "__main__":
-    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['13CS'],normalized=False,binning=3)
+
+    plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['C18O','DCO+'],normalized=True,binning=1)
+    
     # plot_spectra_for_a_molecule(folders_path='TP_FITS', spw_numbers='DCO+',normalized=False)
     # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='12CO')
     # mass_produce_moment_maps(folder_fits='moment_maps_fits', molecule='')
 
     ##plot spectrum
 
-    core = 'M308'
-    plot_average_spectrum(folders_path='TP_FITS/M308', molecules=['C18O'],
-                          normalized=True,save=False)
+    # core = 'M510_M513_M514'
+    # plot_average_spectrum(folders_path=os.path.join('TP_FITS',core), molecules=['C18O','N2D+'],
+    #                       normalized=True,save=True)
 
     # find_the_spectrum_for_a_source(folders_path='TP_FITS/M308/', spw_or_molec='N2D+')
     
@@ -702,7 +706,6 @@ if __name__ == "__main__":
     # BTS.make_moments(param)
     #
     # plot_moment_maps(path='moment_maps_fits/'+core+'/', filename='C18O_'+core)
-
 
 
 
