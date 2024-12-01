@@ -12,21 +12,22 @@ from astropy.visualization.wcsaxes import WCSAxes
 from astropy.wcs.utils import pixel_to_skycoord
 
 
-def mass_produce_spectral_comparison(large_map, coordinate_file,folders_path,molecule='12CO'):
+def mass_produce_spectral_comparison(large_map, coordinate_file,folders_path,molecule_Nobeyama,molecule_ALMA):
     '''
     We mass produce a comparison between Nobeyama and ALMA data
     by calling compare_nobeyama_and_ALMA many times.
     '''
-    array_of_paths = find_all_spectra_for_a_molecule(folders_path, molecule)
+    array_of_paths = find_all_spectra_for_a_molecule(folders_path, molecule_ALMA)
 
     for source_path in array_of_paths:
         print(source_path.split('/')[0])
         try:
-            compare_nobeyama_and_ALMA(large_map, coordinate_file, source_name = source_path.split('/')[0],save=True)
+            compare_nobeyama_and_ALMA(large_map, coordinate_file, source_name = source_path.split('/')[0],
+                                      molecule=molecule_Nobeyama,save=True)
         except IndexError as err:
             print('comparison for '+source_path.split('/')[0]+' was not produced.')
 
-def compare_nobeyama_and_ALMA(large_map,coordinate_file,source_name,radius_in_arcsec=60.0,save=False):
+def compare_nobeyama_and_ALMA(large_map,coordinate_file,source_name,radius_in_arcsec=60.0,molecule='',save=False):
     '''
     We compare the spectra taken from the Nobeyama observatory with the spectra of ALMA data
     '''
@@ -42,8 +43,8 @@ def compare_nobeyama_and_ALMA(large_map,coordinate_file,source_name,radius_in_ar
     colors=['k','r']
     alpha=[1,0.85]
 
-    plt.plot(velocity_small, spectrum_small / np.nanmax(spectrum_small), "-", color=colors[0], lw=2, label='ALMA')
-    plt.plot(velocity_big, spectrum_big/ np.nanmax(spectrum_big), "-", color=colors[1], lw=2, label='Nobeyama')
+    plt.plot(velocity_small, spectrum_small / np.nanmax(spectrum_small), "-", color=colors[0], lw=2, label='C18O ALMA')
+    plt.plot(velocity_big, spectrum_big/ np.nanmax(spectrum_big), "-", color=colors[1], lw=2, label=molecule+' Nobeyama')
     plt.xlabel("velocity [km/s]", size=15)
     plt.ylabel("Intensity", size=15)
     plt.tick_params(axis='both', direction='in')
@@ -53,7 +54,7 @@ def compare_nobeyama_and_ALMA(large_map,coordinate_file,source_name,radius_in_ar
     plt.title(str(source_name) , fontsize=18)
 
     if save:
-        save_fig_name = 'comparison_ALMA_vs_Nobeyama_C18O_source_'+source_name+'.png'
+        save_fig_name = 'comparison_ALMA_vs_Nobeyama_'+molecule+'_source_'+source_name+'.png'
         plt.savefig(os.path.join('Figures/Nobeyama/', save_fig_name), bbox_inches='tight',dpi=300)
 
     plt.show()
@@ -105,7 +106,7 @@ def create_spectrum_from_position(large_map,coordinate_file,source_name,radius_i
         plt.show()
     return average_spectrum, velocity
 
-def show_spatial_location_of_spectra(large_map, coordinate_file,source_name,radius_in_arcsec=360.0):
+def show_spatial_location_of_spectra(large_map, coordinate_file,source_name,radius_in_arcsec=360.0, molecule='C18O'):
     '''
     plot moment zero pf Nobeyama data and mark the position of the sources
     from the coordinate file
@@ -117,19 +118,20 @@ def show_spatial_location_of_spectra(large_map, coordinate_file,source_name,radi
     velocity = data_cube.vel/1e3 ## from m/s to km/s
     velocity_resolution = data_cube.velocity_resolution/1e3  ## from m/s to km/s
 
-
     #### Compute moment zero map
-    lower_idx, upper_idx = closest_idx(velocity, 4.0), closest_idx(velocity, 8.0)
-    moment_0_map = np.sum(image[lower_idx:upper_idx,:,:], axis=0)
+    lower_idx, upper_idx = closest_idx(velocity, 4.8), closest_idx(velocity, 7.0)
+    moment_0_map = np.max(image[lower_idx:upper_idx,:,:], axis=0)
+    max_map = np.nanmax(moment_0_map)*0.3
+    min_map = np.nanmin(moment_0_map)
 
     #### Plot the map
     fig = plt.figure(figsize=(6,6))
     fig1 = fig.add_subplot(111, projection=data_cube.wcs, slices=('x','y',150))
     unique_moment_0_val = np.unique(moment_0_map)
-    mom0_im = fig1.imshow(moment_0_map, cmap="viridis", origin='lower', vmin=3,vmax=50)
+    mom0_im = fig1.imshow(moment_0_map, cmap="viridis", origin='lower', vmin=min_map,vmax=max_map)
 
     ### Change the limits
-    pixel_limits_ra =250
+    pixel_limits_ra = 250
     pixel_limits_dec =150
     fig1.set_xlim(-0.5+pixel_limits_ra, data_cube.ny - 0.5 -pixel_limits_ra)
     fig1.set_ylim(-0.5+pixel_limits_dec, data_cube.nx - 0.5 -pixel_limits_dec)
@@ -145,6 +147,7 @@ def show_spatial_location_of_spectra(large_map, coordinate_file,source_name,radi
     pixel_scale_ra = data_cube.wcs.wcs.cdelt[0] * 3600  # arcseconds per pixel
     pixel_scale_dec = data_cube.wcs.wcs.cdelt[1] * 3600  # arcseconds per pixel
     aperture_radius = abs(radius_in_arcsec / pixel_scale_ra)
+    plt.title(str(molecule) , fontsize=18)
 
     for ii, name in enumerate(source_list):
         # if name in source_name:
@@ -157,7 +160,7 @@ def show_spatial_location_of_spectra(large_map, coordinate_file,source_name,radi
         fig1.add_patch(s)
     plt.show()
 
-    filename='Nobeyama_C18O_source_locations.png'
+    filename='Nobeyama_HCN_source_locations.png'
     fig.savefig(os.path.join('Figures/Nobeyama/',filename),dpi=300, bbox_inches='tight')
 
 def read_source_positions(text_file):
@@ -180,13 +183,17 @@ def read_source_positions(text_file):
 if __name__ == "__main__":
 
     # source ='M262'
-    # compare_nobeyama_and_ALMA(large_map='C18O_2022-2024_01kms_spheroidal_xyb_base.fits',
+    # molecule='HCOp'
+    # compare_nobeyama_and_ALMA(large_map=molecule+'_2022-2024_01kms_spheroidal_xyb_base.fits',
     #                                coordinate_file='Herschel_coordinates_from_ALMA.txt',
-    #                                source_name=source)
+    #                                source_name=source, molecule=molecule,save=True)
     folder_fits = 'TP_FITS'
-    mass_produce_spectral_comparison(large_map='C18O_2022-2024_01kms_spheroidal_xyb_base.fits',
+    molecule_Nobeyama='H13COp'
+    mass_produce_spectral_comparison(large_map=molecule_Nobeyama+'_2022-2024_01kms_spheroidal_xyb_base.fits',
                                    coordinate_file='Herschel_coordinates_from_ALMA.txt',
-                                     folders_path=folder_fits, molecule='C18O')
+                                     folders_path=folder_fits, molecule_Nobeyama=molecule_Nobeyama
+                                     ,molecule_ALMA='C18O')
 
-    # show_spatial_location_of_spectra(large_map='C18O_2022-2024_01kms_spheroidal_xyb_base.fits',
-    #                                coordinate_file='Herschel_coordinates_from_ALMA.txt',source_name='M262')
+    # show_spatial_location_of_spectra(large_map=molecule_Nobeyama+'_2022-2024_01kms_spheroidal_xyb_base.fits',
+    #                                coordinate_file='Herschel_coordinates_from_ALMA.txt',source_name='M262',
+    #                                  molecule=molecule_Nobeyama)

@@ -104,7 +104,7 @@ def create_spectral_maps(path,molecule=None,filename=None,save=False,show=True,b
         ax.set_ylim(-1,max_value+0.5)
 
     plt.suptitle('Source: '+source_name+' -  Molec: ' + data_cube.molec_name, fontsize=18)
-    fig.supylabel('Intensity (K)', fontsize= 14)
+    fig.supylabel('Intensity (Jy/Beam)', fontsize= 14)
     fig.supxlabel('Velocity (km/s)', fontsize= 14)
     
     if save:
