@@ -160,7 +160,7 @@ def show_spatial_location_of_spectra(large_map, coordinate_file,source_name,radi
         fig1.add_patch(s)
     plt.show()
 
-    filename='Nobeyama_HCN_source_locations.png'
+    filename='Nobeyama_'+molecule+'_source_locations.png'
     fig.savefig(os.path.join('Figures/Nobeyama/',filename),dpi=300, bbox_inches='tight')
 
 def read_source_positions(text_file):
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     #                                coordinate_file='Herschel_coordinates_from_ALMA.txt',
     #                                source_name=source, molecule=molecule,save=True)
     folder_fits = 'TP_FITS'
-    molecule_Nobeyama='H13COp'
+    molecule_Nobeyama='CN'
     mass_produce_spectral_comparison(large_map=molecule_Nobeyama+'_2022-2024_01kms_spheroidal_xyb_base.fits',
                                    coordinate_file='Herschel_coordinates_from_ALMA.txt',
                                      folders_path=folder_fits, molecule_Nobeyama=molecule_Nobeyama
