@@ -1,5 +1,6 @@
 import os
 import matplotlib.pyplot as plt
+import matplotlib
 # from astropy.io import fits
 import numpy as np
 from make_TP_maps import ALMATPData
@@ -15,35 +16,53 @@ import astropy.io.fits as pyfits
 from spectral_cube import SpectralCube
 from pyspeckit.spectrum.units import SpectroscopicAxis
 
-
 def runit():
-    
+    # Load your data cube
     cube = SpectralCube.read('TP_FITS/M308/member.uid___A001_X15aa_X2a0.M308_sci.spw21.cube.I.sd.fits')
-    pcube = pyspeckit.Cube(cube=cube)
-    # pcube.xarr.convert_to_unit(u.km/u.s)
-    xarr = SpectroscopicAxis(np.linspace(22, 24) * u.GHz,
-                             refX=23 * u.GHz,
-                             velocity_convention='radio')
-    pcube.xarr.velocity_convention = 'radio'
-    
-    # # Set up the fitter by doing a preliminary fit
-    pcube.specfit(fittype='gaussian', guesses='moments')
-    #
-    # # Fit each spectrum with a gaussian
-    # # First, assemble the guesses:
-    guesses = np.array([cube.max(axis=0).value,
-                        cube.moment1(axis=0).to(u.km / u.s).value,
-                        (cube.moment2(axis=0) ** 0.5).to(u.km / u.s).value])
-    # (the second moment is in m^2/s^2, but we want km/s
-    #
-    # # Do the fit!
-    # pcube.fiteach(guesses=guesses,  # pass in the guess array
-    #               # tell it where to start the fitting (center pixel in this case)
-    #               start_from_point=(5, 5),
-    #               # Paralellize the fits?
-    #               multicore=4,
-    #               fittype='gaussian',
-    #               )
+
+    # Define the rest frequency for the C18O (2-1) transition
+    rest_frequency = 219.56 * u.GHz
+
+    # Extract the spectral axis (frequency) from the cube
+    freq_axis = cube.spectral_axis  # This should be in frequency units (e.g., Hz)
+
+    # Convert the frequency axis to velocity using the radio convention
+    velocity_axis = freq_axis.to(u.km / u.s, equivalencies=u.doppler_radio(rest_frequency))
+
+    # Create a SpectroscopicAxis with the velocity data
+    xarr = SpectroscopicAxis(velocity_axis.value, unit=velocity_axis.unit,
+                             refX=rest_frequency, velocity_convention='radio')
+
+    # Initialize the pyspeckit Cube with the data and the new spectral axis
+    pcube = pyspeckit.Cube(cube=cube, xarr=xarr)
+
+    pcube.fiteach(fittype='gaussian', guesses='moments', multicore=4)
+    # Access fitted parameters
+    amplitude_map = pcube.parcube[0, :, :]
+    centroid_map = pcube.parcube[1, :, :]
+    sigma_map = pcube.parcube[2, :, :]
+
+    # Visualize fitted parameters
+    plt.figure(figsize=(15, 5))
+
+    plt.subplot(1, 3, 1)
+    plt.imshow(amplitude_map, origin='lower', cmap='viridis')
+    plt.title('Amplitude')
+    plt.colorbar()
+
+    plt.subplot(1, 3, 2)
+    plt.imshow(centroid_map, origin='lower', cmap='viridis')
+    plt.title('Centroid')
+    plt.colorbar()
+
+    plt.subplot(1, 3, 3)
+    plt.imshow(sigma_map, origin='lower', cmap='viridis')
+    plt.title('Sigma')
+    plt.colorbar()
+
+    plt.tight_layout()
+    plt.show()
+
 
 def average_over_intervals(data_cube, N, M):
     """
@@ -162,4 +181,11 @@ if __name__ == "__main__":
     ### Creation of a maps for all sources for a given molecule
     folder_fits = 'TP_FITS'
     # mass_produce_spectral_maps(folder_fits, molecule='C18O',binning=1)
+
+    print("Current Matplotlib backend:", matplotlib.get_backend())
+
+    # Set a compatible backend, e.g., TkAgg
+    matplotlib.use('TkAgg')
+    print("Current Matplotlib backend:", matplotlib.get_backend())
+
     runit()
