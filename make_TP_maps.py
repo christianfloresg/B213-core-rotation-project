@@ -706,6 +706,3 @@ if __name__ == "__main__":
     # BTS.make_moments(param)
     #
     # plot_moment_maps(path='moment_maps_fits/'+core+'/', filename='C18O_'+core)
-
-
-
