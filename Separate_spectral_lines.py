@@ -19,184 +19,146 @@ from pyspeckit.spectrum.units import SpectroscopicAxis
 def gaussian(x, amplitude, mean, sigma):
     return amplitude * np.exp(-0.5 * ((x - mean) / sigma) ** 2)
 
-def fit_each_pixel(folder,molecule):
+def fit_each_pixel(folder, molecule, num_gaussians):
     # Load your data cube
-    if molecule!=None:
+    if molecule is not None:
         full_filename_path = find_the_spectrum_for_a_source(folder, molecule)
-        filename = full_filename_path.split('/')[-1]
+        filename = os.path.basename(full_filename_path)
 
-    full_path = os.path.join(folder,filename)
+    full_path = os.path.join(folder, filename)
     cube = SpectralCube.read(full_path)
 
-    # Define the rest frequency for the C18O (2-1) transition
+    # Define the rest frequency for the transition (adjust as necessary)
     rest_frequency = 219.5603541 * u.GHz
 
     # Convert the spectral axis to velocity using the radio convention
     cube = cube.with_spectral_unit(u.km / u.s, velocity_convention='radio', rest_value=rest_frequency)
 
-    # print('the array ',cube.spectral_axis.value)
-
     # Initialize the pyspeckit Cube with the data and the new spectral axis
     pcube = pyspeckit.Cube(cube=cube)
 
-    # Generate initial guesses for fitting two Gaussian components
+    # Generate initial guesses for fitting N Gaussian components
     # Each Gaussian requires three parameters: amplitude, centroid, and width
-    # For two Gaussians, we need six parameters in total
+    guesses = []
+    limits = []
+    limited = []
+
+    guesses = [20, 5.5, 0.1, 30, 6.8, 0.1, 30, 7.0, 0.1]
     
-    guesses = np.array([10,5.5,0.2, 30,7,0.2])
+    for i in range(num_gaussians):
+        # Example initial guesses; adjust based on your data characteristics
+        # guesses.extend([10, 4 + i, 0.1])  # Amplitude, Centroid, Sigma
+        limits.extend([(5, 120), (3, 9), (0.05, 0.6)])  # Adjust limits as necessary
+        limited.extend([(True, True), (True, True), (True, True)])  # Enforce all limits
 
-    # Define limits for each parameter
-    # Format: [(min1, max1), (min2, max2), ..., (minN, maxN)]
-    limits = [(3, 40),  # Amplitude1: must be between 0 and 100
-              (4, 6),  # Center1: must be between 5 and 6
-              (0.1, 0.5),  # Sigma1: must be between 0.5 and 2
-              (10, 80),  # Amplitude2: must be between 0 and 100
-              (6, 8),  # Center2: must be between 6 and 8
-              (0.1, 0.5)]  # Sigma2: must be between 0.5 and 2
-
-    # Indicate which limits are to be enforced
-    # Format: [(min1_bool, max1_bool), (min2_bool, max2_bool), ..., (minN_bool, maxN_bool)]
-    limited = [(True, True),  # Amplitude1 is bounded on both sides
-               (True, True),  # Center1 is bounded on both sides
-               (True, True),  # Sigma1 is bounded on both sides
-               (True, True),  # Amplitude2 is bounded on both sides
-               (True, True),  # Center2 is bounded on both sides
-               (True, True)]  # Sigma2 is bounded on both sides
-
-    # Perform Gaussian fitting with two components
+    # Perform Gaussian fitting with N components
     pcube.fiteach(fittype='gaussian', guesses=guesses,
                   limits=limits,
                   limited=limited,
-                  start_from_point=(0,0), multicore=4, signal_cut=5)
+                  start_from_point=(0, 0), multicore=4, signal_cut=5)
 
-    plot_gaussian_maps(pcube)
+    plot_gaussian_maps(pcube, num_gaussians)
 
     return cube, pcube
 
 
-def plot_gaussian_maps(pcube):
+def plot_gaussian_maps(pcube, num_gaussians):
+    plt.figure(figsize=(9, 3 * num_gaussians))
 
-    # Access fitted parameters
-    amplitude_map1 = pcube.parcube[0, :, :]
-    centroid_map1 = pcube.parcube[1, :, :]
-    sigma_map1 = pcube.parcube[2, :, :]
-
-    amplitude_map2 = pcube.parcube[3, :, :]
-    centroid_map2 = pcube.parcube[4, :, :]
-    sigma_map2 = pcube.parcube[5, :, :]
-
-    peak1 = np.percentile(amplitude_map1, 99)
     levels = np.array([0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95])
-    levels1 = levels * peak1
 
-    peak2 = np.percentile(amplitude_map2, 99)
-    levels2 = levels * peak2
+    for i in range(num_gaussians):
+        amplitude_map = pcube.parcube[3 * i, :, :]
+        centroid_map = pcube.parcube[3 * i + 1, :, :]
+        sigma_map = pcube.parcube[3 * i + 2, :, :]
+        moment0_map = amplitude_map * sigma_map * np.sqrt(2 * np.pi)
 
-    plt.figure(figsize=(20, 7))
+        peak = np.percentile(moment0_map, 99)
+        levels_i = levels * peak
 
-    plt.subplot(2, 3, 1)
-    plt.imshow(amplitude_map1, origin='lower', cmap='viridis',vmin=np.percentile(amplitude_map1, 1),vmax= peak1)
-    plt.title('Amplitude 1')
-    plt.colorbar()
-    contour = plt.contour(amplitude_map1, levels=levels1, colors="black")
-    plt.clabel(contour, inline=True, fontsize=8)
+        plt.subplot(num_gaussians, 3, 3 * i + 1)
+        plt.imshow(moment0_map, origin='lower', cmap='viridis', vmin=np.percentile(moment0_map, 1), vmax=peak)
+        plt.title(f'Moment Zero Component {i + 1}')
+        plt.colorbar()
+        contour = plt.contour(moment0_map, levels=levels_i, colors="black")
+        plt.clabel(contour, inline=True, fontsize=8)
 
+        plt.subplot(num_gaussians, 3, 3 * i + 2)
+        plt.imshow(centroid_map, origin='lower', cmap='coolwarm', vmin=np.percentile(centroid_map, 1), vmax=np.percentile(centroid_map, 99))
+        plt.title(f'Centroid {i + 1}')
+        plt.colorbar()
 
-    plt.subplot(2, 3, 2)
-    plt.imshow(centroid_map1, origin='lower', cmap='coolwarm',vmin=np.percentile(centroid_map1, 1),vmax=np.percentile(centroid_map1, 99))
-    plt.title('Centroid 1')
-    plt.colorbar()
-
-    plt.subplot(2, 3, 3)
-    plt.imshow(sigma_map1, origin='lower', cmap='jet',vmin=np.percentile(sigma_map1, 1),vmax=np.percentile(sigma_map1, 99))
-    plt.title('Sigma 1')
-    plt.colorbar()
-
-    plt.subplot(2, 3, 4)
-    plt.imshow(amplitude_map2, origin='lower', cmap='viridis',vmin=np.percentile(amplitude_map2, 1),vmax=peak2)
-    plt.colorbar()
-    contour = plt.contour(amplitude_map2, levels=levels2, colors="black")
-    plt.clabel(contour, inline=True, fontsize=8)
-    plt.title('Amplitude 2')
-
-    plt.subplot(2, 3, 5)
-    plt.imshow(centroid_map2, origin='lower', cmap='coolwarm',vmin=np.percentile(centroid_map2, 1),vmax=np.percentile(centroid_map2, 99))
-    plt.title('Centroid 2')
-    plt.colorbar()
-
-    plt.subplot(2, 3, 6)
-    plt.imshow(sigma_map2, origin='lower', cmap='jet', vmin=np.percentile(sigma_map2, 1),vmax=np.percentile(sigma_map2, 99))
-    plt.title('Sigma 2')
-    plt.colorbar()
+        plt.subplot(num_gaussians, 3, 3 * i + 3)
+        plt.imshow(sigma_map, origin='lower', cmap='jet', vmin=np.percentile(sigma_map, 1), vmax=np.percentile(sigma_map, 99))
+        plt.title(f'Sigma {i + 1}')
+        plt.colorbar()
 
     plt.tight_layout()
     plt.show()
 
-def plot_gaussian_spectral_maps(folder,molecule):
+
+
+def plot_gaussian_spectral_maps(folder, molecule, num_gaussians=2):
     """
     Overplots the best-fit Gaussian models on the observed spectra using ImageGrid layout.
+
+    Parameters:
+    - folder: str, path to the data folder.
+    - molecule: str, molecule name to identify the data file.
+    - n_components: int, number of Gaussian components fitted.
     """
-
     def create_subplot_fit(cube, velocity, start_y, start_x, end_y, end_x, title):
-
-        fig = plt.figure(figsize=(10, 10))
+        """
+        Creates an ImageGrid subplot of the spectra with the fitted Gaussian models overlaid.
+        """
+        fig = plt.figure(figsize=(8, 8))
         grid = ImageGrid(fig, 111, nrows_ncols=(end_y - start_y, end_x - start_x), axes_pad=0.0, aspect=False)
 
         for count, ax in enumerate(grid):
             row = count % (end_x - start_x)
             column = count // (end_y - start_y)
-            # if row >= grid_size_x or column >= grid_size_y:
-            #     continue
 
             observed_spectrum = cube[:, start_y + column, start_x + row].value
-            amp1, cen1, sig1 = amplitude_map1[start_y + column, start_x + row], \
-                               centroid_map1[start_y + column, start_x + row], \
-                               sigma_map1[start_y + column, start_x + row]
-            amp2, cen2, sig2 = amplitude_map2[start_y + column, start_x + row],\
-                               centroid_map2[start_y + column, start_x + row], \
-                               sigma_map2[start_y + column, start_x + row]
+            ax.plot(velocity, observed_spectrum, label="Observed Spectrum", color='black')
 
-            gaussian_fit1 = gaussian(velocity_axis, amp1, cen1, sig1)
-            gaussian_fit2 = gaussian(velocity_axis, amp2, cen2, sig2)
 
-            ax.plot(velocity_axis, observed_spectrum, label="Observed Spectrum")
-            ax.plot(velocity_axis, gaussian_fit1, linestyle="--", label="Gaussian Fit 1", color="red")
-            ax.plot(velocity_axis, gaussian_fit2, linestyle="--", label="Gaussian Fit 2", color="blue")
+            total_gaussian = np.zeros_like(velocity)  # Initialize array for summed Gaussian
 
-            ax.set_xlim(3, 11)
-            ax.set_ylim(-1, max(observed_spectrum) + 0.5)
+            for i in range(num_gaussians):
+                amp = pcube.parcube[3 * i, start_y + column, start_x + row]
+                cen = pcube.parcube[3 * i + 1, start_y + column, start_x + row]
+                sig = pcube.parcube[3 * i + 2, start_y + column, start_x + row]
+
+                gaussian_fit = gaussian(velocity, amp, cen, sig)
+                total_gaussian += gaussian_fit  # Sum all Gaussian components
+
+                ax.plot(velocity, gaussian_fit, linestyle="--", label=f"Gaussian Fit {i + 1}",alpha=0.7)
+
+            # Plot the summed Gaussian model
+            ax.plot(velocity, total_gaussian, linestyle="--", label="Sum of Gaussians", color='red', linewidth=0.5)
+
+            ax.set_xlim(3,9)
+            ax.set_ylim(-1, max(observed_spectrum)*1.01)
             ax.tick_params(axis='both', which='major', labelsize=6)
 
         plt.suptitle(title, fontsize=18)
         fig.supylabel('Intensity (Jy/Beam)', fontsize=14)
         fig.supxlabel('Velocity (km/s)', fontsize=14)
-        
-    cube, pcube = fit_each_pixel(folder, molecule)
+
+    # Fit N-Gaussian components
+    cube, pcube = fit_each_pixel(folder, molecule, num_gaussians)
 
     velocity_axis = cube.spectral_axis.value  # Extract velocity axis
-    amplitude_map1 = pcube.parcube[0, :, :]
-    centroid_map1 = pcube.parcube[1, :, :]
-    sigma_map1 = pcube.parcube[2, :, :]
-
-    amplitude_map2 = pcube.parcube[3, :, :]
-    centroid_map2 = pcube.parcube[4, :, :]
-    sigma_map2 = pcube.parcube[5, :, :]
-
     grid_size_y, grid_size_x = cube.shape[1], cube.shape[2]
 
-    # Top-left quadrant
+    # Plot for different quadrants
     create_subplot_fit(cube, velocity_axis, 0, 0, 8, 8, 'Top-Left Quadrant')
-
-    # Top-right quadrant
     create_subplot_fit(cube, velocity_axis, 0, 8, 8, 16, 'Top-Right Quadrant')
-
-    # Bottom-left quadrant
     create_subplot_fit(cube, velocity_axis, 8, 0, 16, 8, 'Bottom-Left Quadrant')
-
-    # Bottom-right quadrant
     create_subplot_fit(cube, velocity_axis, 8, 8, 16, 16, 'Bottom-Right Quadrant')
-    
+
     plt.show()
+
 
 def create_spectral_maps(path,molecule=None,filename=None,save=False,show=True,binning=1):
     '''
@@ -284,10 +246,10 @@ if __name__ == "__main__":
 
 
     ### Creation of a maps for all sources for a given molecule
-    folder = 'TP_FITS/M273/'
+    folder = 'TP_FITS/M275/'
     molecule = 'C18O'
-    # fit_each_pixel(folder,molecule)
+    # fit_each_pixel(folder,molecule,num_gaussians=3)
     # mass_produce_spectral_maps(folder_fits, molecule='C18O',binning=1)
 
     # Plot the Gaussian fits over the spectral maps
-    plot_gaussian_spectral_maps(folder, molecule)
+    plot_gaussian_spectral_maps(folder, molecule,num_gaussians=3)
