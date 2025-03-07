@@ -1,0 +1,20 @@
+# This is a comment line and should be ignored
+source,molecule,n_components,guesses
+## Single components
+TP_FITS/M236,C18O,1,"20, 6.5, 0.1"
+#TP_FITS/M505,C18O,1,"40, 6.2, 0.1"
+#TP_FITS/M508,C18O,1,"50, 6.0, 0.1"
+TP_FITS/M463,C18O,1,"50, 6.5, 0.1"
+
+## Double close components
+#TP_FITS/M463,C18O,2,"50, 6.5, 0.1, 20, 7.5, 0.1"
+TP_FITS/M505,C18O,2,"20, 6.2, 0.1, 40, 6.5, 0.1"
+TP_FITS/M508,C18O,2,"50, 6.0, 0.1, 20, 6.5, 0.1"
+
+## Double wide components
+TP_FITS/M273,C18O,2,"10, 5.5, 0.1, 40, 6.7, 0.1"
+TP_FITS/M308,C18O,2,"10, 5.5, 0.1, 40, 6.7, 0.1"
+
+## Triple components
+#TP_FITS/M273,C18O,3,"80, 5.5, 0.1, 70, 6.0, 0.1, 60, 6.5, 0.2"
+TP_FITS/M275,C18O,3,"20, 5.5, 0.1, 30, 6.8, 0.1, 30, 7.0, 0.1"
