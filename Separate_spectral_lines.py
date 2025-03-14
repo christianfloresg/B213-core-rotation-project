@@ -16,7 +16,7 @@ import astropy.io.fits as pyfits
 from spectral_cube import SpectralCube
 from pyspeckit.spectrum.units import SpectroscopicAxis
 import csv
-from 2D-spectral-maps import average_over_intervals
+from TwoD_spectral_maps import average_over_intervals
 
 def read_csv_parameters(file_path):
     """
@@ -62,7 +62,7 @@ def read_csv_parameters(file_path):
 def gaussian(x, amplitude, mean, sigma):
     return amplitude * np.exp(-0.5 * ((x - mean) / sigma) ** 2)
 
-def fit_each_pixel(folder, molecule, num_gaussians, guesses):
+def fit_each_pixel(folder, molecule, num_gaussians, guesses, binning_factor=2):
     '''
     Fit each pixel of a datacube using a series of gaussinas defined by
     num_gaussians and with initial guesses given.
@@ -84,8 +84,15 @@ def fit_each_pixel(folder, molecule, num_gaussians, guesses):
     # Convert the spectral axis to velocity using the radio convention
     cube = cube.with_spectral_unit(u.km / u.s, velocity_convention='radio', rest_value=rest_frequency)
 
+    axis_to_bin_y = 1  # Axis to bin along (0: spectral, 1: y-axis, 2: x-axis)
+    axis_to_bin_x = 2  # Axis to bin along (0: spectral, 1: y-axis, 2: x-axis)
+
+    # Apply the downsampling (binning)
+    binned_cube2 = cube.downsample_axis(factor=binning_factor, axis=axis_to_bin_y)
+    binned_cube = binned_cube2.downsample_axis(factor=binning_factor, axis=axis_to_bin_x)
+
     # Initialize the pyspeckit Cube with the data and the new spectral axis
-    pcube = pyspeckit.Cube(cube=cube)
+    pcube = pyspeckit.Cube(cube=binned_cube)
 
     # Generate initial guesses for fitting N Gaussian components
     # Each Gaussian requires three parameters: amplitude, centroid, and width
@@ -97,7 +104,7 @@ def fit_each_pixel(folder, molecule, num_gaussians, guesses):
     for i in range(num_gaussians):
         # Example initial guesses; adjust based on your data characteristics
         # guesses.extend([10, 4 + i, 0.1])  # Amplitude, Centroid, Sigma
-        limits.extend([(3, 120), (guesses[3*i + 1] - 1, guesses[3*i + 1] + 1), (0.03, 1.0)])  # Adjust limits as necessary
+        limits.extend([(3, 120), (guesses[3*i + 1] - 1.0, guesses[3*i + 1] + 1.0), (0.03, 0.8)])  # Adjust limits as necessary
         limited.extend([(True, True), (True, True), (True, True)])  # Enforce all limits
 
     # Perform Gaussian fitting with N components
@@ -108,11 +115,11 @@ def fit_each_pixel(folder, molecule, num_gaussians, guesses):
 
     plot_gaussian_maps(pcube, num_gaussians)
 
-    return cube, pcube
+    return binned_cube, pcube
 
 
 def plot_gaussian_maps(pcube, num_gaussians, save=True):
-    plt.figure(figsize=(9, 3 * num_gaussians))
+    plt.figure(figsize=(10, 4 * num_gaussians))
 
     levels = np.array([0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95])
 
@@ -211,23 +218,23 @@ def plot_gaussian_spectral_maps(folder, molecule, num_gaussians, guesses, save=T
         fig.supylabel('Intensity (Jy/Beam)', fontsize=14)
         fig.supxlabel('Velocity (km/s)', fontsize=14)
         if save:
-            source_name = folder.split('/')[-1]
             title_to_save = title.replace(" ", "")
             fig.savefig(os.path.join(save_folder, 'Separated_lines_spectral_maps', source_name +'_n_gauss_'+ str(num_gaussians) + '_'+ title_to_save),
-                        bbox_inches='tight', dpi=300)
+                        bbox_inches='tight', dpi=500)
 
     # Fit N-Gaussian components
     cube, pcube = fit_each_pixel(folder, molecule, num_gaussians, guesses)
-
+    source_name = folder.split('/')[-1]
     velocity_axis = cube.spectral_axis.value  # Extract velocity axis
     grid_size_y, grid_size_x = cube.shape[1], cube.shape[2]
 
-    # Plot for different quadrants
-    create_subplot_fit(cube, velocity_axis, 0, 0, 16, 16, 'Bottom-Left Quadrant')
-    create_subplot_fit(cube, velocity_axis, 0, 16, 16, 32, 'Bottom-Right Quadrant')
-    create_subplot_fit(cube, velocity_axis, 16, 0, 32, 16, 'Top-Left Quadrant')
-    create_subplot_fit(cube, velocity_axis, 16, 16, 32, 32, 'Top-Right Quadrant')
-    # create_subplot_fit(cube, velocity_axis, 0, 0, 32, 32, 'Full')
+    # print(grid_size_x,grid_size_y)
+    # # Plot for different quadrants
+    # create_subplot_fit(cube, velocity_axis, 0, 0, 16, 16, 'Bottom-Left Quadrant')
+    # create_subplot_fit(cube, velocity_axis, 0, 16, 16, 32, 'Bottom-Right Quadrant')
+    # create_subplot_fit(cube, velocity_axis, 16, 0, 32, 16, 'Top-Left Quadrant')
+    # create_subplot_fit(cube, velocity_axis, 16, 16, 32, 32, 'Top-Right Quadrant')
+    create_subplot_fit(cube, velocity_axis, 0, 0, grid_size_y, grid_size_x, source_name+'_Full')
     if plot:
         plt.show()
 
