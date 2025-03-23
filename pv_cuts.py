@@ -119,7 +119,7 @@ def edge_pixel_from_angle(alpha,nx,ny):
 
     return [xf,yf],[x2f,y2f]
 
-def define_pv_path_from_angle(cube,angle):
+def define_pv_path_from_angle(cube,angle,position='edge'):
     '''
     define a pv path based on the center of the field, and an angle
     '''
@@ -136,9 +136,6 @@ def define_pv_path_from_angle(cube,angle):
     # Get the reference pixel for the spectral axis
     ref_pixel_spectral = cube_wcs.wcs.crpix[2] - 1  # Subtract 1 because FITS is 1-indexed
     print(ref_pixel_spectral,'sectral index  coordinates')
-
-    # center_pixel = [nx / 2 - 0.5, ny / 2 -0.5]  # Center pixel coordinates | the center of the pixel is at 0.5 units
-    # world_coords_center, freq_center = cube_wcs.pixel_to_world(center_pixel[0], center_pixel[1], ref_pixel_spectral)
 
     edge_pixel1, edge_pixel2 = edge_pixel_from_angle(angle,nx,ny)
     print(edge_pixel1,'edge pixels 1')
@@ -157,11 +154,36 @@ def define_pv_path_from_angle(cube,angle):
     ra_values = [edge_ra1, edge_ra2]
     dec_values = [edge_dec1, edge_dec2]
 
+    print(position)
+
+    
+    if position=='center_r':
+        center_pixel = [nx / 2 - 0.5, ny / 2 -0.5]  # Center pixel coordinates | the center of the pixel is at 0.5 units
+        world_coords_center, freq_center = cube_wcs.pixel_to_world(center_pixel[0], center_pixel[1], ref_pixel_spectral)
+
+        center_ra = world_coords_center.ra.deg
+        ceter_dec = world_coords_center.dec.deg
+
+        ra_values = [center_ra, edge_ra1]
+        dec_values = [ceter_dec, edge_dec1]
+
+    elif position=='center_b':
+
+        center_pixel = [nx / 2 - 0.5, ny / 2 -0.5]  # Center pixel coordinates | the center of the pixel is at 0.5 units
+        world_coords_center, freq_center = cube_wcs.pixel_to_world(center_pixel[0], center_pixel[1], ref_pixel_spectral)
+
+        center_ra = world_coords_center.ra.deg
+        ceter_dec = world_coords_center.dec.deg
+
+        # Create the Path
+        ra_values = [center_ra, edge_ra2]
+        dec_values = [ceter_dec, edge_dec2]
+
     path = Path(SkyCoord(ra_values, dec_values, unit="deg", frame="fk5"), width=28 * u.arcsec)
 
     return path
 
-def extract_pv_cut(source_name,molecule,degree_angle=0):
+def extract_pv_cut(source_name,molecule,degree_angle=0, position='edge'):
 
     folder_destination = os.path.join('TP_FITS', source_name)
     full_filename_path = find_the_spectrum_for_a_source(folder_destination, molecule)
@@ -173,7 +195,7 @@ def extract_pv_cut(source_name,molecule,degree_angle=0):
     # Define start and end points of the path in celestial coordinates
 
     # path = define_pv_path_from_coordinates(["4h17m39s", "+27d55m12s"],["4h17m34s", "+27d56m12s"])
-    path = define_pv_path_from_angle(cube,degree_angle)
+    path = define_pv_path_from_angle(cube,degree_angle,position)
 
     # Step 3: Extract the PV slice
     pv_slice = extract_pv_slice(cube, path)
@@ -184,7 +206,10 @@ def extract_pv_cut(source_name,molecule,degree_angle=0):
     return cube, path, pv_slice, ww
 
 def plot_extraced_pv_cut(source_name,molecule,degree_angle=0):
-    
+    '''
+    plot the PV cut extracted along an angle. The PV cut is made either from
+    center to both edges or from edge-to-edge
+    '''
     cube, path, pv_slice, ww = extract_pv_cut(source_name, molecule, degree_angle=degree_angle)
 
     data = cube.unmasked_data[:].value
@@ -242,7 +267,10 @@ def plot_extraced_pv_cut(source_name,molecule,degree_angle=0):
     plt.show()
 
 def plot_pv_and_moment_one(source_name,molecule,path,degree_angle=0):
-
+    '''
+    plot in two panels the moment one map woth an overlay of the direction of the PV cut and width
+    and also the resulting PV cut.
+    '''
     moment_map_name = molecule+'_'+core
 
     data_cube = ALMATPData(path, moment_map_name+'_mom0.fits')
@@ -285,8 +313,11 @@ def plot_pv_and_moment_one(source_name,molecule,path,degree_angle=0):
         # extent=(spatial_extent[0], spatial_extent[1], 0, 10)
     )
 
-    vel_min = 5.0*1e3  # Minimum velocity in meter/s
-    vel_max = 8.0*1e3  # Maximum velocity in meter/s
+    # vel_min = 5.0*1e3  # Minimum velocity in meter/s
+    # vel_max = 8.0*1e3  # Maximum velocity in meter/s
+
+    vel_min = 4.0*1e3  # Minimum velocity in meter/s
+    vel_max = 7.0*1e3  # Maximum velocity in meter/s
 
     # Convert velocity range to pixel indices
     spatial_placeholder = 0  # Assuming single spatial point or fixed placeholder
@@ -315,19 +346,122 @@ def plot_pv_and_moment_one(source_name,molecule,path,degree_angle=0):
 
     plt.suptitle(source_name + ' ' + molecule + '   angle_deg = ' + str(degree_angle), fontsize=18)
     plt.tight_layout()
-    plt.savefig("Figures/pv_diagrams/"+source_name+'_'+molecule+'_angle_+'+str(degree_angle)+'.png', bbox_inches='tight',dpi=300)
+    plt.savefig("Figures/pv_diagrams/automatic_angle/"+source_name+'_'+molecule+'_angle_+'+str(degree_angle)+'.png', bbox_inches='tight',dpi=300)
     plt.show()
 
+def peak_value_for_each_radius(source_name,molecule,degree_angle,v_lsr):
+    '''
+    Calculate the velocity for each radius from the PV diagram. Several methods should be implemented,
+    such as the 'Spine' or strongest emission. It can also be just fitted with a polynomial order for continuity
+    and then extract the points. It would be important to consider the Nyquist sampling, right?
+    '''
+
+    positions = ['center_r','center_b']
+    colors=['C0','C1']
+    pv_data = []
+    radii = []
+    velocities = []
+    peak_velocities = []
+    for count, value in enumerate(positions):
+        cube, path, pv_slice, ww = extract_pv_cut(source_name,molecule,degree_angle, position=value)
+        # Find the index of the maximum intensity along the y-axis (velocity axis) for each x
+        peak_indices = np.argmax(pv_slice.data, axis=0)
+
+        spatial_placeholder = 0  # Assuming single spatial point or fixed placeholder
+        # Convert these indices to velocity values
+        peak_velocity = ww.pixel_to_world_values(spatial_placeholder,peak_indices)[1]/1e3
+
+        # print(cube)
+        x = np.arange(pv_slice.header['NAXIS1'])
+        y = np.arange(pv_slice.header['NAXIS2'])
+
+        radial_array = ww.pixel_to_world_values(x, 0)[0]
+        velocity_array = ww.pixel_to_world_values(0, y)[1]
+
+        radial_array_arcmin = radial_array*60.
+        velocity_array_kms= velocity_array/1e3
+
+        radii.append(radial_array_arcmin)
+        velocities.append(velocity_array_kms)
+        pv_data.append(pv_slice.data)
+        peak_velocities.append(peak_velocity)
+
+    plt.figure(figsize=(15, 6))
+    # plt.subplot(111, projection=ww)
+    ax1 = plt.subplot(131)
+
+    pv_image = ax1.imshow(
+        pv_data[0],
+        origin="lower",
+        aspect="auto",
+        # cmap="viridis",extent=(radial_array_arcmin[0], radial_array_arcmin[-1],
+        #         velocity_array_kms[0], velocity_array_kms[-1])
+        cmap="viridis", extent=(radii[0][0], radii[0][-1],
+                                velocities[0][0], velocities[0][-1])
+    )
+
+    ax1.scatter(radii[0], peak_velocities[0],color=colors[0])
+
+    ax2 = plt.subplot(132)
+
+    pv_image = ax2.imshow(
+        pv_data[1],
+        origin="lower",
+        aspect="auto",
+        # cmap="viridis",extent=(radial_array_arcmin[0], radial_array_arcmin[-1],
+        #         velocity_array_kms[0], velocity_array_kms[-1])
+        cmap="viridis", extent=(radii[1][0], radii[1][-1],
+                                velocities[1][0], velocities[1][-1])
+    )
+    ax2.scatter(radii[1], peak_velocities[1],color=colors[1])
+
+
+    ax1.set_ylim(5,8)
+    ax2.set_ylim(5,8)
+
+    ax1.set_xlabel("Offset [arcmin]")
+    ax1.set_ylabel("Velocity [km/s]")
+    ax2.set_xlabel("Offset [arcmin]")
+    ax2.set_ylabel("Velocity [km/s]")
+
+    ax3 = plt.subplot(133)
+
+    if peak_velocities[0][0] == peak_velocities[1][0]:
+        v_lsr = peak_velocities[0][0]
+
+    # print('v_lsr', peak_velocities[0][0], v_lsr,peak_velocities[1][0])
+    velocity_gradient_r = ((peak_velocities[0]-v_lsr)**2 )**0.5
+    velocity_gradient_b = ((peak_velocities[1]-v_lsr)**2 )**0.5
+
+    ax3.scatter(radii[0], velocity_gradient_r,color=colors[0])
+    ax3.scatter(radii[1], velocity_gradient_b,color=colors[1])
+
+    ax3.set_xlabel("Radial offset [arcmin]")
+    ax3.set_ylabel(r" $\delta$V [km/s]")
+    ax3.set_title("Peak Velocity vs Radius")
+    plt.grid()
+
+    ax3.set_ylim(-0.1,0.6)
+
+    plt.suptitle(source_name + ' ' + molecule + '   angle_deg = ' + str(degree_angle)+ '   v_lsr = ' + str(round(v_lsr,2)), fontsize=18)
+
+    plt.tight_layout()
+    plt.savefig("Figures/pv_diagrams/velocity_gradients/"+source_name+'_'+molecule+'_angle_+'+str(degree_angle)+'.png', bbox_inches='tight',dpi=300)
+    plt.show()
+
+def velocity_gradient():
+    '''
+    plot the velocity gradient by
+    '''
 
 if __name__ == "__main__":
-    core = 'M236'
+    core = 'M508'
     molecule = 'C18O'
-    angle = 55 ## measured north from east
+    angle = 136.8## measured north from east
+    v_lsr=6.44
     path = os.path.join('moment_maps_fits',core)
-    plot_pv_and_moment_one(core, molecule, path, degree_angle=angle)
+    # plot_pv_and_moment_one(core, molecule, path, degree_angle=angle)
     # plot_extraced_pv_cut(source_name=core,molecule=molecule,degree_angle=angle)
     # print(full_filename_path)
 
-    # folder_destination = 'linearfit_demo'
-    # name_of_fits= 'hl_tau.h2co.contsub.selfcal.robust0.5.pbcor.subim.fits'
-    # extract_pv_cut(source_name=core,molecule=molecule,degree_angle=angle)
+    peak_value_for_each_radius(core,molecule,angle,v_lsr)

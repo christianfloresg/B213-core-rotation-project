@@ -119,7 +119,7 @@ def fit_each_pixel(folder, molecule, num_gaussians, guesses, binning_factor=2):
 
 
 def plot_gaussian_maps(pcube, num_gaussians, save=True):
-    plt.figure(figsize=(10, 4 * num_gaussians))
+    plt.figure(figsize=(10, 3 * num_gaussians))
 
     levels = np.array([0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95])
 
@@ -132,10 +132,12 @@ def plot_gaussian_maps(pcube, num_gaussians, save=True):
         peak = np.percentile(moment0_map, 99)
         levels_i = levels * peak
 
+        fig_fraction = 0.048
+        fig_pad = 0.04
         plt.subplot(num_gaussians, 3, 3 * i + 1)
         plt.imshow(moment0_map, origin='lower', cmap='viridis', vmin=np.percentile(moment0_map, 1), vmax=peak)
-        plt.title(f'Moment Zero Component {i + 1}')
-        plt.colorbar()
+        plt.title(f'Moment Zero Gauss {i + 1}')
+        plt.colorbar(fraction=fig_fraction, pad=fig_pad, label='Integrated Intensity (Jy/beam * km/s)')
         contour = plt.contour(moment0_map, levels=levels_i, colors="black")
         plt.clabel(contour, inline=True, fontsize=8)
 
@@ -144,13 +146,13 @@ def plot_gaussian_maps(pcube, num_gaussians, save=True):
         plt.subplot(num_gaussians, 3, 3 * i + 2)
         plt.imshow(centroid_map, origin='lower', cmap='coolwarm', vmin=np.percentile(nonzero_values_centroid, 2), vmax=np.percentile(centroid_map, 98))
         plt.title(f'Centroid {i + 1}')
-        plt.colorbar()
+        plt.colorbar(fraction=fig_fraction, pad=fig_pad, label='Velocity (km/s)')
 
         nonzero_values_sigma = sigma_map[centroid_map != 0]  # Keeps only non-zero elements
         plt.subplot(num_gaussians, 3, 3 * i + 3)
         plt.imshow(sigma_map, origin='lower', cmap='jet', vmin=np.percentile(nonzero_values_sigma, 2), vmax=np.percentile(sigma_map, 98))
         plt.title(f'Sigma {i + 1}')
-        plt.colorbar()
+        plt.colorbar(fraction=fig_fraction, pad=fig_pad, label='Velocity (km/s)')
 
     plt.tight_layout()
 
@@ -319,7 +321,7 @@ if __name__ == "__main__":
 
     save_folder = 'Figures/Separated_lines/'
 
-    folder = 'TP_FITS/M273'
+    folder = 'TP_FITS/M365'
     molecule = 'C18O'
 
     params_file = "gaussian_params_guess.csv"  # Path to your CSV file

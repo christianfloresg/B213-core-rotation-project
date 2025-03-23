@@ -7,4 +7,5 @@ moment_maps_fits/
 Figures/
 .DS_Store
 do-not-save/
+linearfit_demo/Figures/
 pvcuts/

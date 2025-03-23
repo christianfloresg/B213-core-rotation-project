@@ -404,7 +404,6 @@ def find_the_spectrum_for_a_source(folders_path, spw_or_molec='.spw27.'):
     except:
         print('please check that your spectral window coincides with molcules in "molecule_rest_freq" file')
 
-
     filenames = get_files_in_directory(folders_path)
 
     for names in filenames:
