@@ -331,7 +331,7 @@ def peak_value_for_each_radius(
 
                 if save:
                     plt.savefig(
-                        "Figures/pv_diagrams/velocity_gradients/velocity_gradient_diag_plot_"+pos+'_'+ source_name + '_' + molecule + '_angle_+' + str(
+                        "Figures/pv_diagrams/velocity_gradients_with_fit/velocity_gradient_diag_plot_"+pos+'_'+ source_name + '_' + molecule + '_angle_+' + str(
                             degree_angle) + '.png',bbox_inches='tight',  dpi=300)
         if diag:
             # turn off unused panels
@@ -356,7 +356,7 @@ def peak_value_for_each_radius(
         pv_list[0], origin="lower", aspect="auto", cmap="viridis",
         extent=(radii_list[0][0], radii_list[0][-1], vaxis_list[0][0], vaxis_list[0][-1])
     )
-    ax1.errorbar(radii_list[0], vtrace_list[0], yerr=verr_list[0], fmt='o', ms=4, capsize=2, color=colors[0])
+    ax1.errorbar(radii_list[0], vtrace_list[0], yerr=verr_list[0], fmt='o', ms=4, capsize=2, color=colors[1])
     ax1.set_xlabel("Offset [arcmin]"); ax1.set_ylabel("Velocity [km/s]")
     ax1.set_ylim(vmin_kms, vmax_kms); ax1.set_title("center_r")
 
@@ -365,142 +365,145 @@ def peak_value_for_each_radius(
         pv_list[1], origin="lower", aspect="auto", cmap="viridis",
         extent=(radii_list[1][0], radii_list[1][-1], vaxis_list[1][0], vaxis_list[1][-1])
     )
-    ax2.errorbar(radii_list[1], vtrace_list[1], yerr=verr_list[1], fmt='o', ms=4, capsize=2, color=colors[1])
+    ax2.errorbar(radii_list[1], vtrace_list[1], yerr=verr_list[1], fmt='o', ms=4, capsize=2, color=colors[0])
     ax2.set_xlabel("Offset [arcmin]"); ax2.set_ylabel("Velocity [km/s]")
     ax2.set_ylim(vmin_kms, vmax_kms); ax2.set_title("center_b")
 
     v_lsr = vtrace_list[0][0]+1e-2
+
     ax3 = plt.subplot(133)
+
+    # Build |V - Vlsr| (you already have v_lsr)
     dv_r = np.abs(vtrace_list[0] - v_lsr)
     dv_b = np.abs(vtrace_list[1] - v_lsr)
 
-    dpc=130
-    radii_list_r_au = np.multiply(radii_list[0]+4e-2,60)*dpc
-    radii_list_b_au = np.multiply(radii_list[1]+4e-2,60)*dpc
+    # Convert radii to AU (your current recipe)
+    dpc = 130
+    r_r_au = (radii_list[0] + 4e-2) * 60.0 * dpc
+    r_b_au = (radii_list[1] + 4e-2) * 60.0 * dpc
 
-    ax3.errorbar(radii_list_r_au, dv_r, yerr=verr_list[0], fmt='o', ms=4, capsize=2, color=colors[0], label='center_r')
-    ax3.errorbar(radii_list_b_au, dv_b, yerr=verr_list[1], fmt='o', ms=4, capsize=2, color=colors[1], label='center_b')
+    # Plot points with error bars (centroid errors are also δV errors)
+    ax3.errorbar(r_r_au, dv_r, yerr=verr_list[0], fmt='o', ms=5, capsize=2,mec='k',
+                 color=colors[1], label='center_r data')
+    ax3.errorbar(r_b_au, dv_b, yerr=verr_list[1], fmt='o', ms=5, capsize=2,mec='k',
+                 color=colors[0], label='center_b data')
 
-    # one_to_one = np.linspace(0,1e3,100)
-    # ax3.plot(one_to_one,one_to_one,'k--')
-    # ax3.set_xlabel("Radial offset [arcmin]");
-    ax3.set_xlabel("Radial offset [au]");
-    ax3.set_ylabel(r"$\delta V$ [km/s]")
-    ax3.set_title("Peak Velocity vs Radius")
-    ax3.grid(alpha=0.3);
-    ax3.legend()
-    ax3.set_ylim(1e-3,1e0)
+    # Log scales
     ax3.set_xscale("log")
     ax3.set_yscale("log")
-    
+
+    # --- NEW: fit power laws on the same axes and draw the lines ---
+    fit_red = fit_powerlaw_and_plot(ax3, r_r_au, dv_r, yerr=verr_list[0], color=colors[1], label='center_r')
+    fit_blue = fit_powerlaw_and_plot(ax3, r_b_au, dv_b, yerr=verr_list[1], color=colors[0], label='center_b')
+
+    ax3.set_xlabel("Radial offset [au]")
+    ax3.set_ylabel(r"$\delta V$ [km/s]")
+    ax3.set_title("Peak Velocity vs Radius")
+    ax3.grid(alpha=0.3, which='both')
+    ax3.legend()
+
     plt.suptitle(
         f"{source_name} {molecule} | angle={degree_angle}° | v_lsr={v_lsr:.2f} | Nyquist={nyquist_factor * beam_arcsec:.0f}\"",
         fontsize=13)
     plt.tight_layout()
 
+    # Optionally print results to console for quick copy/paste
+    print("Power-law fits:")
+    print("  center_r: alpha = {:.3f} ± {:.3f}, A = {:.3e}".format(
+        fit_red['alpha'], fit_red['alpha_err'], fit_red['A']))
+    print("  center_b: alpha = {:.3f} ± {:.3f}, A = {:.3e}".format(
+        fit_blue['alpha'], fit_blue['alpha_err'], fit_blue['A']))
+
+
     if save:
-        plt.savefig("Figures/pv_diagrams/velocity_gradients/velocity_gradient_plot_"+source_name+'_'+molecule+'_angle_+'+str(degree_angle)+'.png',
+        plt.savefig("Figures/pv_diagrams/velocity_gradients_with_fit/velocity_gradient_plot_"+source_name+'_'+molecule+'_angle_+'+str(degree_angle)+'.png',
                     bbox_inches='tight',dpi=300)
 
     plt.show()
 
-    # return minimal outputs if you want to post-process
     return {
         'radii_arcmin': radii_list,
         'vel_axis_kms': vaxis_list,
         'vtrace_kms': vtrace_list,
-        'vtrace_err_kms': verr_list
+        'vtrace_err_kms': verr_list,
+        'powerlaw_fits': {
+            'center_r': fit_red,
+            'center_b': fit_blue
+        }
     }
 
+    # return minimal outputs if you want to post-process
+    # return {
+    #     'radii_arcmin': radii_list,
+    #     'vel_axis_kms': vaxis_list,
+    #     'vtrace_kms': vtrace_list,
+    #     'vtrace_err_kms': verr_list
+    # }
 
-def fit_and_plot_powerlaws(
-    radii_list,         # [r_red_arcmin_array, r_blue_arcmin_array]
-    vtrace_list,        # [v_red_kms_array,   v_blue_kms_array]  (centroids)
-    v_lsr,              # systemic velocity (km/s)
-    yerr_list=None,     # optional: [σv_red, σv_blue]; 1σ on centroid (km/s)
-    labels=('center_r','center_b'),
-    colors=('C0','C1'),
-    ax=None,
-    use_abs=True        # True -> δV = |V - Vlsr| ; False -> signed (must then drop negatives)
-):
+
+def fit_powerlaw_and_plot(ax, x, y, yerr=None, color='C0', label=''):
     """
-    Fits δV = A * r^α separately for red (index 0) and blue (index 1) sides.
-    Returns dict with fit params and plots them on ax (or a new figure).
+    Fit y = A * x^alpha by linear regression in log10 space and
+    draw the fitted line on the given axis (assumed to be log-log).
+    Returns dict(alpha, alpha_err, A).
+
+    ax   : matplotlib Axes (already created; can be linear or log, we’ll just plot)
+    x, y : 1D arrays (must be >0 to be usable on log scale)
+    yerr : optional 1D array of 1σ errors on y (same units as y)
     """
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    if yerr is not None:
+        yerr = np.asarray(yerr, dtype=float)
 
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(6.0, 4.8))
+    # keep only finite, positive points (required for log)
+    m = np.isfinite(x) & np.isfinite(y) & (x > 0) & (y > 0)
+    if yerr is not None:
+        m &= np.isfinite(yerr)  # allow 0 errors; we’ll handle below
+    if not np.any(m):
+        return {'alpha': np.nan, 'alpha_err': np.nan, 'A': np.nan}
 
-    results = {}
-    for i, (lab, col) in enumerate(zip(labels, colors)):
-        r = np.asarray(radii_list[i], dtype=float)     # arcmin
-        v = np.asarray(vtrace_list[i], dtype=float)     # km/s
+    xx = x[m]
+    yy = y[m]
+    if yerr is not None:
+        ee = yerr[m]
+        # convert σ(y) -> σ(log10 y): σ_logy ≈ σ_y / (y ln 10)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            sig_logy = ee / (yy * np.log(10))
+        # weights for np.polyfit are “w”, minimizing sum( w * (y - f)^2 )
+        # For 1/σ^2 weighting in log space -> w = 1 / σ^2
+        # np.polyfit uses w directly, not 1/σ, so we pass w = 1/σ_logy
+        # but since it multiplies the residuals by w, standard choice is w=1/σ
+        # We’ll follow numpy docs: w = 1/σ (log space)
+        w = 1.0 / np.where(np.isfinite(sig_logy) & (sig_logy > 0), sig_logy, np.nan)
+        goodw = np.isfinite(w) & (w > 0)
+        xx, yy, w = xx[goodw], yy[goodw], w[goodw]
+        X = np.log10(xx)
+        Y = np.log10(yy)
+        if len(X) < 2:
+            return {'alpha': np.nan, 'alpha_err': np.nan, 'A': np.nan}
+        (alpha, b), cov = np.polyfit(X, Y, deg=1, w=w, cov=True)
+    else:
+        X = np.log10(xx)
+        Y = np.log10(yy)
+        if len(X) < 2:
+            return {'alpha': np.nan, 'alpha_err': np.nan, 'A': np.nan}
+        (alpha, b), cov = np.polyfit(X, Y, deg=1, cov=True)
 
-        dv = np.abs(v - v_lsr) if use_abs else (v - v_lsr)
-        # positive-only for log
-        m = np.isfinite(r) & np.isfinite(dv) & (r > 0) & (dv > 0)
-        if not np.any(m):
-            results[lab] = {'alpha': np.nan, 'alpha_err': np.nan, 'A': np.nan}
-            continue
+    alpha_err = float(np.sqrt(cov[0, 0])) if (cov is not None and np.isfinite(cov[0, 0])) else np.nan
+    A = 10.0**b
 
-        r_use = r[m]
-        dv_use = dv[m]
-
-        # weights: convert σ(dv) -> σ(log10 dv) if provided
-        if yerr_list is not None and yerr_list[i] is not None:
-            e = np.asarray(yerr_list[i], dtype=float)
-            e = e[m]
-            # avoid zero/NaN errors
-            e = np.where(np.isfinite(e) & (e > 0), e, np.nan)
-            # σ_log10(y) ≈ σ_y / (y * ln(10))
-            sig_logy = e / (dv_use * np.log(10))
-            w = 1.0 / np.square(sig_logy)
-            # if any non-finite, drop them
-            goodw = np.isfinite(w) & (w > 0)
-            r_use, dv_use, w = r_use[goodw], dv_use[goodw], w[goodw]
-            use_weights = (len(w) >= 2)
-        else:
-            w = None
-            use_weights = False
-
-        # linear fit in log10 space: log10(dv) = alpha*log10(r) + b
-        x = np.log10(r_use)
-        y = np.log10(dv_use)
-        if len(x) < 2:
-            results[lab] = {'alpha': np.nan, 'alpha_err': np.nan, 'A': np.nan}
-            continue
-
-        if use_weights:
-            (alpha, b), cov = np.polyfit(x, y, deg=1, w=np.sqrt(w), cov=True)
-        else:
-            (alpha, b), cov = np.polyfit(x, y, deg=1, cov=True)
-
-        alpha_err = float(np.sqrt(cov[0, 0])) if (cov is not None and np.isfinite(cov[0, 0])) else np.nan
-        A = 10.0**b
-
-        results[lab] = {'alpha': float(alpha), 'alpha_err': alpha_err, 'A': float(A)}
-
-        # --- plot data + fit line ---
-        ax.loglog(r_use, dv_use, 'o', ms=4, color=col, label=f"{lab} data")
-        # draw fitted line across span
-        rx = np.linspace(r_use.min(), r_use.max(), 200)
-        ax.loglog(rx, A * rx**alpha, '-', color=col, lw=2,
-                  label=f"{lab} fit: α={alpha:.2f}±{alpha_err:.2f}")
-
-    ax.set_xlabel("Radial offset r [arcmin]")
-    ax.set_ylabel(r"$\delta V$ [km s$^{-1}$]")
-    ax.grid(True, which='both', alpha=0.3)
-    ax.legend()
-    plt.tight_layout()
-
-    return results
-
+    # draw fitted line over data span
+    rx = np.linspace(xx.min(), xx.max(), 200)
+    ax.plot(rx, A * rx**alpha, '--', color=color, lw=1,
+            label=(f"{label} fit: α={alpha:.2f}±{alpha_err:.2f}" if label else None))
+    return {'alpha': float(alpha), 'alpha_err': alpha_err, 'A': float(A)}
 
 # --- example ---
 if __name__ == "__main__":
     core = 'M463'
     molecule = 'C18O'
-    angle = 47.8#-25
+    angle = 47.8 + 9.0#-25
     vel_range = [5.0, 9.0]
 
     peak_value_for_each_radius(
@@ -512,3 +515,4 @@ if __name__ == "__main__":
         max_diag=12,
         save=True
     )
+

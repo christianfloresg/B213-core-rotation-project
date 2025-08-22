@@ -1,11 +1,11 @@
 import sys
 import os
 import numpy as np
-sys.path.append('/Users/christianflores/Documents/Work/GitHub/B213-core-rotation-project')
+sys.path.append('/Users/christianflores/Documents/GitHub/B213-core-rotation-project')
 
 from make_TP_maps import find_the_spectrum_for_a_source
 
-sys.path.append('/Users/christianflores/Documents/Work/GitHub/B213-core-rotation-project/imfits')
+sys.path.append('/Users/christianflores/Documents/GitHub/B213-core-rotation-project/imfits')
 from imfits import Imfits, au
 
 my_path = os.getcwd()
@@ -15,12 +15,12 @@ os.chdir(my_path)
 def main():
     # ------------- get moment map -------------
 
-    source_name = 'M389'
+    source_name = 'M463'
     folder_path = os.path.join('../TP_FITS',source_name)
-    filename = find_the_spectrum_for_a_source(folder_path, spw_or_molec='C18O')
+    filename = find_the_spectrum_for_a_source(folder_path, spw_or_molec='SO')
     print(filename)
     # vrange = [5.7, 7.2] # velocity range with more than 3sigma detection
-    vrange = [4.0, 5.5] # velocity range with more than 3sigma detection
+    vrange = [5.0, 9.0] # velocity range with more than 3sigma detection
 
     # # moment map
     cube = Imfits(filename)
