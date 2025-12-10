@@ -1,0 +1,252 @@
+
+J/MNRAS/459/342     Dense cores in Taurus L1495 cloud        (Marsh+, 2016)
+================================================================================
+A census of dense cores in the Taurus L1495 cloud from the
+Herschel Gould Belt Survey.
+    Marsh K.A., Kirk J.M., Andre P., Griffin M.J., Konyves V., Palmeirim P.,
+    Men'shchikov A., Ward-thompson D., Benedettini M., Bresnahan D.W.,
+    Di Francesco J., Elia D., Motte F., Peretto N., Pezzuto S., Roy A.,
+    Sadavoy S., Schneider N., Spinoglio L., White G.J.
+   <Mon. Not. R. Astron. Soc., 459, 342-356 (2016)>
+   =2016MNRAS.459..342M    (SIMBAD/NED BibCode)
+================================================================================
+ADC_Keywords: Molecular clouds ; Photometry, millimetric/submm ; Morphology
+Keywords: stars: formation - stars: luminosity function, mass function -
+          ISM: clouds - ISM: individual objects: L1495 -
+          local interstellar matter - submillimetre: ISM
+
+Abstract:
+    We present a catalogue of dense cores in a ~4{deg}x2{deg} field of
+    the Taurus star-forming region, inclusive of the L1495 cloud, derived
+    from Herschel SPIRE and PACS observations in the 70{mu}m, 160{mu}m,
+    250{mu}m, 350{mu}m, and 500{mu}m continuum bands. Estimates of mean
+    dust temperature and total mass are derived using modified blackbody
+    fits to the spectral energy distributions. We detect 525 starless
+    cores of which ~10-20 per cent are gravitationally bound and
+    therefore presumably prestellar. Our census of unbound objects is
+    ~85 per cent complete for M>0.015M_{sun}_ in low-density regions
+    (A_V_<~5mag), while the bound (prestellar) subset is ~85 per cent
+    complete for M>0.1M_{sun}_ overall. The prestellar core mass function
+    (CMF) is consistent with lognormal form, resembling the stellar system
+    initial mass function, as has been reported previously. All of the
+    inferred prestellar cores lie on filamentary structures whose column
+    densities exceed the expected threshold for filamentary collapse, in
+    agreement with previous reports. Unlike the prestellar CMF, the
+    unbound starless CMF is not lognormal, but instead is consistent with
+    a power-law form below 0.3M_{sun}_ and shows no evidence for a
+    low-mass turnover. It resembles previously reported mass distributions
+    for CO clumps at low masses (M<~0.3M_{sun}_). The volume density PDF,
+    however, is accurately lognormal except at high densities. It is
+    consistent with the effects of self-gravity on magnetized supersonic
+    turbulence. The only significant deviation from lognormality is a
+    high-density tail which can be attributed unambiguously to prestellar
+    cores.
+
+Description:
+    The observational data on which the present catalogue is based
+    consists of a set of images of the L1495 cloud in the Taurus
+    star-forming region, made as part of the HGBS (Andre et al. 2010). The
+    data were taken using PACS at 70, 160, 250, 350 and 500 microns in
+    fast-scanning (60"/s) parallel mode.
+
+File Summary:
+--------------------------------------------------------------------------------
+ FileName      Lrecl  Records   Explanations
+--------------------------------------------------------------------------------
+ReadMe            80        .   This file
+tableb1.dat      467      536   TAURUS-L1495 observed core catalog
+tableb2.dat      156      536   TAURUS-L1495 derived core catalog
+--------------------------------------------------------------------------------
+
+See also:
+   http://gouldbelt-herschel.cea.fr/ : Herschel Gould Belt Home Page
+
+Byte-by-byte Description of file: tableb1.dat
+--------------------------------------------------------------------------------
+   Bytes Format Units     Label     Explanations
+--------------------------------------------------------------------------------
+   1-  3  I3    ---       Seq       [1/536] Source number (Source_number)
+   5- 19  A15   ---       Name      Source name (Source_name)
+      21  I1    h         RAh       Right ascension (J2000) (RA_2000_h)
+  23- 24  I2    min       RAm       Right ascension (J2000) (RA_2000_m)
+  26- 30  F5.2  s         RAs       Right ascension (J2000) (RA_2000_s)
+      31  A1    ---       DE-       Declination sign (J2000)
+  32- 33  I2    deg       DEd       Declination (J2000) (DEC_2000_d)
+  35- 36  I2    arcmin    DEm       Declination (J2000) (DEC_2000_m)
+  38- 42  F5.2  arcsec    DEs       Declination (J2000) (DEC_2000_m)
+  44- 49  F6.1  ---       sig70     Detection significance at 70um (Sig_70)
+  51- 58  E8.5  Jy/beam   I70peak   Estimate of the peak intensity at 70um
+                                     ((I_70)peak)
+  60- 66  E7.4  Jy/beam e_I70peak   Error in the estimate of the peak intensity
+                                     (e_(I_70)peak)
+  68- 73  F6.2  ---       C70       Contrast over the local background at 70um
+                                     ((I_70)peak/Ibg)
+  75- 82  E8.5  Jy/beam   I70conv   Peak intensity at 70um after smoothing to a
+                                     resolution corresponding to the 500um
+                                     ((I_70)conv500)
+  84- 92  E9.5  Jy        S70       Estimate of the total flux at 70um (S_70)
+  94-100  E7.4  Jy      e_S70       Error in estimate of the total flux at 70um
+                                     (e_S_70)
+ 102-104  I3    arcsec    a70       Estimate of size along major axis at 70um
+                                     (a_70)
+ 106-108  I3    arcsec    b70       Estimate of size along minor axis at 70um
+                                     (b_70)
+ 110-112  I3    deg       PA70      Position angle of source major axis at 70um
+                                     (E to N) (PA_70)
+ 114-118  F5.1  ---       sig160    Detection significance at 160um (Sig_160)
+ 120-127  E8.5  Jy/beam   I160peak  Estimate of the peak intensity at 160um
+                                     ((I_160)peak)
+ 129-134  F6.4  Jy/beam e_I160peak  Error in the estimate of the peak intensity
+                                    at 160um (e_(I_160)peak)
+ 136-140  F5.2  ---       C160      Contrast of the peak intensity at 160um over
+                                     the local background ((I_160)peak/Ibg)
+ 142-149  E8.5  Jy/beam   I160conv  Peak intensity at 160um after smoothing to
+                                     a resolution corresponding to the 500um
+                                     ((I_160)conv500)
+ 151-158  E8.5  Jy        S160      Estimate of the total flux at 160um (S_160)
+ 160-165  F6.4  Jy      e_S160      Error in estimate of the total flux at
+                                    160um (e_S_160)
+ 167-169  I3    arcsec    a160      Estimate of size along major axis at 160um
+                                     (a_160)
+ 171-173  I3    arcsec    b160      Estimate of size along minor axis at 160um
+                                     (b_160)
+ 175-177  I3    deg       PA160     Position angle of source major axis at 160um
+                                     (E to N) (PA_160)
+ 179-183  F5.1  ---       sig250    Detection significance at 250um (Sig_250)
+ 185-191  F7.4  Jy/beam   I250peak  Estimate of the peak intensity at 250um
+                                     ((I_250)peak)
+ 193-199  E7.4  Jy/beam e_I250peak  Error in the estimate of the peak intensity
+                                     at 250um (e_(I_250)peak)
+ 201-205  F5.2  ---       C250      Contrast over the local background at 250um
+                                     ((I_250)peak/Ibg)
+ 207-212  F6.3  Jy/beam   I250conv  Peak intensity at 250um after smoothing to a
+                                     resolution corresponding to the 500um
+                                     ((I_250)conv500)
+ 214-220  F7.4  Jy        S250      Estimate of the total flux at 250um (S_250)
+ 222-228  E7.4  Jy      e_S250      Error in estimate of the total flux at
+                                    250um (e_S_250)
+ 230-232  I3    arcsec    a250      Estimate of size along major axis at 250um
+                                     (a_250)
+ 234-236  I3    arcsec    b250      Estimate of size along minor axis at 250um
+                                     (b_250)
+ 238-240  I3    deg       PA250     Position angle of source major axis at 250um
+                                     (E to N) (PA_250)
+ 242-246  F5.1  ---       sig350    Detection significance at 350um (Sig_350)
+ 248-253  F6.4  Jy/beam   I350peak  Estimate of the peak intensity at 350um
+                                     ((I_350)peak)
+ 255-261  E7.4  Jy/beam e_I350peak  Error in the estimate of the peak intensity
+                                     at 350um (e_(I_350)peak)
+ 263-268  F6.2  ---       C350      Contrast over the local background at 350um
+                                     ((I_350)peak/Ibg)
+ 270-275  F6.4  Jy/beam   I350conv  Peak intensity at 350um after smoothing to
+                                     a resolution corresponding to the 500um
+                                     ((I_350)conv500)
+ 277-283  F7.4  Jy        S350      Estimate of the total flux at 350um (S_350)
+ 285-291  E7.4  Jy      e_S350      Error in estimate of the total flux at
+                                     350um (e_S_350)
+ 293-295  I3    arcsec    a350      Estimate of size along major axis at 350um
+                                     (a_350)
+ 297-299  I3    arcsec    b350      Estimate of size along minor axis at 350um
+                                     (b_350)
+ 301-303  I3    deg       PA350     Position angle of source major axis at 350um
+                                     (E to N) (PA_350)
+ 305-309  F5.1  ---       sig500    Detection significance at 500um (Sig_500)
+ 311-317  F7.4  Jy/beam   I500peak  Estimate of the peak intensity at 500um
+                                     ((I_500)peak)
+ 319-325  E7.4  Jy/beam e_I500peak  Error in the estimate of the peak intensity
+                                     at 500um (e_(I_5000)peak)
+ 327-331  F5.2  ---       C500      Contrast over the local background at 500um
+                                     ((I_500)peak/Ibg)
+ 333-340  F8.5  Jy        S500      Estimate of the total flux at 500um (S_500)
+ 342-348  E7.4  Jy      e_S500      Error in estimate of the total flux at
+                                     500um (e_S_500)
+ 350-352  I3    arcsec    a500      Estimate of size along major axis at 500um
+                                     (a_500)
+ 354-356  I3    arcsec    b500      Estimate of size along minor axis at 500um
+                                     (b_500)
+ 358-360  I3    deg       PA500     Position angle of source major axis at 500um
+                                     (E to N) (PA_500)
+ 362-366  F5.1  ---       sigNH2    Detection significance from single scales on
+                                     high-res column density map (Sig(N_H2))
+ 368-371  F4.1 10+21cm-2  NH2peak   Peak column density at 18.2" resolution,
+                                     estimated by getsources ((N_H2)peak)
+ 373-376  F4.2  ---       CNH2      Contrast of peak column density  over the
+                                     local background ((N_H2)peak/(N_H2)bg)
+ 378-381  F4.1 10+21cm-2  NH2conv   Peak column density after smoothing to a
+                                     resolution corresponding to the 500um
+                                     ((N_H2)conv500)
+ 383-386  F4.1 10+21cm-2  NH2bg     Column density of local background
+                                     ((N_H2)bg)
+ 388-390  I3    arcsec    aNH2      Estimate of source size along major axis in
+                                     column density map (a_(N_H2))
+ 392-394  I3    arcsec    bNH2      Estimate of source size along minor axis in
+                                     column density map (b_(N_H2))
+ 396-398  I3    deg       PANH2     Position angle of source major axis in
+                                     column density map (PA_(N_H2))
+     400  I1    ---       Nsed      Number of bands in which the source is
+                                     significant (Sig_lambda > 5) (N_SED)
+     402  I1    ---       Cflag     [0/2] CSAR flag (CSAR_flag) (1)
+     404  I1    ---       CType     [1/4] Core type (Core_type) (G1)
+ 406-429  A24   ---       Simbad    Simbad ID of nearest match if within 1
+                                     arcmin of Herschel position (SIMBAD_assoc)
+ 431-467  A37   ---       Com       Comments
+--------------------------------------------------------------------------------
+Note on (1): CSAR flag as follows:
+  2 = if the getsources core has a counterpart detected by CSAR
+       (Kirk et al. 2013MNRAS.432.1424K) within 6 arcsec of its peak position
+  1 = if no close CSAR counterpart was found but the peak position of a CSAR
+       source lies within the FWHM contour of the getsources core in the
+       high-resolution column density map
+  0 = otherwise
+--------------------------------------------------------------------------------
+
+Byte-by-byte Description of file: tableb2.dat
+--------------------------------------------------------------------------------
+   Bytes Format Units     Label    Explanations
+--------------------------------------------------------------------------------
+   1-  3  I3    ---       Seq      [1/536] Source number (Source_number)
+   5- 19  A15   ---       Name     Source name (Source_name)
+      21  I1    h         RAh       Right ascension (J2000) (RA_2000_h)
+  23- 24  I2    min       RAm       Right ascension (J2000) (RA_2000_m)
+  26- 30  F5.2  s         RAs       Right ascension (J2000) (RA_2000_s)
+      31  A1    ---       DE-       Declination sign (J2000)
+  32- 33  I2    deg       DEd       Declination (J2000) (DEC_2000_d)
+  35- 36  I2    arcmin    DEm       Declination (J2000) (DEC_2000_m)
+  38- 42  F5.2  arcsec    DEs       Declination (J2000) (DEC_2000_m)
+  44- 48  F5.3  pc        Rad      Core radius as observed (radius)
+  50- 54  F5.3  ---       RadBeam  Core radius with 18.2 arcsec beam
+                                    (radius_beam)
+  56- 60  F5.3  Msun      Mcore    Core mass (Core_mass)
+  62- 66  F5.3  Msun    e_Mcore    Uncertainty in core mass (e_Core_mass)
+  68- 71  F4.1  K         Tdust    Dust temperature (Dust_T)
+  73- 76  F4.1  K       e_Tdust    Uncertainty in dust temperature (e_Dust_T)
+  78- 81  F4.1 10+21cm-2  NH2peak  Peak H2 column density at 500um ((N_H2)peak)
+  83- 87  F5.2 10+21cm-2  <NH2>o   Average column density observed
+                                    (Ave_column_a)
+  89- 93  F5.2 10+21cm-2  <NH2>d   Average column density deconvolved
+                                    (Ave_column_b)
+  95- 99  F5.1 10+4cm-3   nH2peak  Beam-averaged peak volume density
+                                    ((n_H2)peak)
+ 101-105  F5.2 10+4cm-3   <nH2>o   Average volume density observed
+                                    (Ave_volume_a)
+ 107-112  F6.2 10+4cm-3   <nH2>d   Average volume density deconvolved
+                                    (Ave_volume_b)
+ 114-119  F6.1  ---       Mratio   Bonnor-Ebert mass ratio (Bonnor-Ebert)
+     121  I1    ---       CType    [1/4] Core type (Core_type) (G1)
+ 123-156  A34   ---       Com      Comments
+--------------------------------------------------------------------------------
+
+Global notes:
+Note on (G1): Core type as follows:
+    1 = unbound starless
+    2 = prestellar
+    3 = candidate prestellar (non-robust)
+    4 = dense core with embedded protostar
+--------------------------------------------------------------------------------
+
+Acknowledgements:
+    Eva Verdugo, everdugo(at)sciops.esa.int
+    Miriam Aberasturi Vega, maberasturi(at)sciops.esa.int
+
+================================================================================
+(End)  Miriam Aberasturi Vega [Herschel], Patricia Vannier [CDS]     05-Apr-2017

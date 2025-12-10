@@ -17,10 +17,10 @@ def main():
 
     source_name = 'M463'
     folder_path = os.path.join('../TP_FITS',source_name)
-    filename = find_the_spectrum_for_a_source(folder_path, spw_or_molec='SO')
+    filename = find_the_spectrum_for_a_source(folder_path, spw_or_molec='C18O')
     print(filename)
     # vrange = [5.7, 7.2] # velocity range with more than 3sigma detection
-    vrange = [5.0, 9.0] # velocity range with more than 3sigma detection
+    vrange = [5.0, 8.0] # velocity range with more than 3sigma detection
 
     # # moment map
     cube = Imfits(filename)
@@ -32,10 +32,12 @@ def main():
     cube.getmoments([1], vrange = vrange, threshold = [3.*noise_level, 1000.],
         outname = mome_one_file, overwrite = True)
 
+
     # # --------------- 2D linear fit ------------------
     # # linear fit
     #  filename.replace('.fits', '.mom1.fits')
     mom = Imfits(mome_one_file)
+
     au.lnfit2d(mom,
     [np.mean(vrange), 0.1, 0.1], # initla guess for [v0, a, b]
     rfit = 46.0, # Radius of a circle (in arcsec) in which fitting is performed

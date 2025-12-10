@@ -12,6 +12,11 @@ from astropy.coordinates import SkyCoord
 from astropy.modeling import models, fitting
 from astropy.wcs import WCS
 
+
+"""
+Get into the correct environment
+conda activate astropy
+"""
 # ---------- small utility ----------
 
 def open_fits_file(folder,fits_name):
@@ -269,6 +274,7 @@ def peak_value_for_each_radius(
     molecule,
     degree_angle,
     vel_range=[2, 11],
+    plot_vel_range=[2,11],
     beam_arcsec=28.0,
     nyquist_factor=0.5,
     diag=False,        # show small spectra+fit panels
@@ -282,7 +288,14 @@ def peak_value_for_each_radius(
     pv_list, radii_list, vaxis_list = [], [], []
     vtrace_list, verr_list = [], []
 
+    if plot_vel_range is None:
+        plot_vmin_kms, plot_vmax_kms = map(float, vel_range)
+
+    else:
+        plot_vmin_kms, plot_vmax_kms = map(float, plot_vel_range)
+
     vmin_kms, vmax_kms = map(float, vel_range)
+
 
     for pos in positions:
         _, _, pv, ww = extract_pv_cut(source_name, molecule, degree_angle, position=pos)
@@ -314,7 +327,7 @@ def peak_value_for_each_radius(
             mu, mu_err, model, ok = fit_gaussian_centroid(vel_kms, spec, vmin_kms, vmax_kms)
             v_centroids.append(mu)
             v_errors.append(mu_err)
-
+            print(mu)
             # tiny diagnostic panel
             if diag and (k % diag_every == 0) and (plotted < max_diag):
                 ax = axd[plotted]; plotted += 1
@@ -358,7 +371,8 @@ def peak_value_for_each_radius(
     )
     ax1.errorbar(radii_list[0], vtrace_list[0], yerr=verr_list[0], fmt='o', ms=4, capsize=2, color=colors[1])
     ax1.set_xlabel("Offset [arcmin]"); ax1.set_ylabel("Velocity [km/s]")
-    ax1.set_ylim(vmin_kms, vmax_kms); ax1.set_title("center_r")
+    ax1.set_ylim(plot_vmin_kms, plot_vmax_kms); ax1.set_title("center_r")
+
 
     ax2 = plt.subplot(132)
     ax2.imshow(
@@ -367,10 +381,11 @@ def peak_value_for_each_radius(
     )
     ax2.errorbar(radii_list[1], vtrace_list[1], yerr=verr_list[1], fmt='o', ms=4, capsize=2, color=colors[0])
     ax2.set_xlabel("Offset [arcmin]"); ax2.set_ylabel("Velocity [km/s]")
-    ax2.set_ylim(vmin_kms, vmax_kms); ax2.set_title("center_b")
+    ax2.set_ylim(plot_vmin_kms, plot_vmax_kms); ax2.set_title("center_b")
 
-    v_lsr = vtrace_list[0][0]+1e-2
+    v_lsr = vtrace_list[0][0]+1e-3
 
+    print('velocity centroid: ',v_lsr)
     ax3 = plt.subplot(133)
 
     # Build |V - Vlsr| (you already have v_lsr)
@@ -501,13 +516,14 @@ def fit_powerlaw_and_plot(ax, x, y, yerr=None, color='C0', label=''):
 
 # --- example ---
 if __name__ == "__main__":
-    core = 'M463'
+    core = 'M508'
     molecule = 'C18O'
-    angle = 47.8 + 9.0#-25
-    vel_range = [5.0, 9.0]
+    angle = 136.8 #-25
+    vel_range = [5.0, 8.0]
 
     peak_value_for_each_radius(
         core, molecule, angle, vel_range,
+        plot_vel_range=None,
         beam_arcsec=28.0,
         nyquist_factor=0.5,  # 14"
         diag=True,           # quick visual check
@@ -515,4 +531,3 @@ if __name__ == "__main__":
         max_diag=12,
         save=True
     )
-

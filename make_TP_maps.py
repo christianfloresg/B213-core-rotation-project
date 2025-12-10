@@ -250,7 +250,7 @@ def plot_moment_maps(path, filename):
 
     plt.suptitle(filename , fontsize=18)
 
-    fig.savefig(os.path.join('Figures/12CO/',filename), bbox_inches='tight')
+    fig.savefig(os.path.join('Figures/C18O_maps_separated/',filename), bbox_inches='tight')
     plt.show()
     
 def make_average_spectrum_data(path, filename,binning=1):
@@ -678,7 +678,7 @@ def compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='.spw
 
 if __name__ == "__main__":
 
-    plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['C18O','DCO+'],normalized=True,binning=1)
+    # plot_grid_of_spectra(folders_path='TP_FITS', spw_numbers=['C18O','DCO+'],normalized=True,binning=1)
     
     # plot_spectra_for_a_molecule(folders_path='TP_FITS', spw_numbers='DCO+',normalized=False)
     # compute_moment_maps_for_one_molecule(folders_path='TP_FITS',spw_number='12CO')
@@ -692,16 +692,16 @@ if __name__ == "__main__":
 
     # find_the_spectrum_for_a_source(folders_path='TP_FITS/M308/', spw_or_molec='N2D+')
     
-    #Run single sources
-    # core = 'M275'
-    # folder_destination = os.path.join('TP_FITS',core)
-    # name_of_fits = 'member.uid___A001_X15aa_X29e.M275_sci.spw21.cube.I.sd.fits'
-    #
-    #
-    # filename = create_moment_masking_parameterfile(source='Fit_cube_example.param', destination=folder_destination,
-    #                                                fits_file_name=name_of_fits)
-    # param = BTS.read_parameters(filename)
+    # Run single sources
+    core = 'M493'
+    folder_destination = os.path.join('TP_FITS',core)
+    name_of_fits = 'member.uid___A001_X15aa_X29e.M493_sci.spw21.cube.I.sd.fits'
+
+
+    filename = create_moment_masking_parameterfile(source='Fit_cube_example.param', destination=folder_destination,
+                                                   fits_file_name=name_of_fits)
+    param = BTS.read_parameters(filename)
     # # # # # # Run the function to make the moments using the moment-masking technique
-    # BTS.make_moments(param)
-    #
-    # plot_moment_maps(path='moment_maps_fits/'+core+'/', filename='C18O_'+core)
+    BTS.make_moments(param)
+
+    plot_moment_maps(path='moment_maps_fits/'+core+'/', filename='C18O_'+core)
