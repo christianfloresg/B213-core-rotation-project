@@ -11,6 +11,7 @@ from astropy.coordinates import SkyCoord
 
 from astropy.modeling import models, fitting
 from astropy.wcs import WCS
+from collections.abc import Iterable
 
 
 """
@@ -83,6 +84,54 @@ def update_WCS_coordinates(initial_ww, filename):
     ww.wcs.set()
 
     return ww
+
+
+def save_entry(filename, name, molecule, color, *containers):
+    """
+    Append one line to `filename`:
+
+        name  values_from_all_containers...  color
+
+    - containers may be lists, tuples, numpy arrays, or dicts
+    - dicts contribute only their values
+    - floats are written with 5 decimals
+    - do not append if (name, color) already exist
+    """
+
+    # 1. Check for existing (name, color)
+    if os.path.exists(filename):
+        with open(filename, "r") as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) >= 2 and parts[0] == name and parts[1] == molecule and parts[-1] == color:
+                    return False
+
+    values = []
+
+    # 2. Flatten all containers
+    for c in containers:
+        # If dict → take values
+        if isinstance(c, dict):
+            iterable = c.values()
+        else:
+            iterable = c
+
+        # Strings are iterable but should NOT be treated as containers here
+        if isinstance(iterable, str):
+            raise TypeError("String passed where numeric container expected")
+
+        for x in iterable:
+            print(x)
+            # values.append(f"{float(x):.8f}")
+            values.append(f"{float(x):.5g}")
+
+    # 3. Write line
+    line = " ".join([name] + [molecule] + values + [color]) + "\n"
+
+    with open(filename, "a") as f:
+        f.write(line)
+
+    return True
 
 def edge_pixel_from_angle(alpha, nx, ny):
     alpha = alpha % 360
@@ -279,7 +328,7 @@ def peak_value_for_each_radius(
     nyquist_factor=0.5,
     diag=False,        # show small spectra+fit panels
     diag_every=2,      # plot every Nth sampled column when diag=True
-    max_diag=18,        # cap to avoid huge figures
+    max_diag=16,        # cap to avoid huge figures
     save=False
 ):
     positions = ['center_r', 'center_b']
@@ -327,7 +376,7 @@ def peak_value_for_each_radius(
             mu, mu_err, model, ok = fit_gaussian_centroid(vel_kms, spec, vmin_kms, vmax_kms)
             v_centroids.append(mu)
             v_errors.append(mu_err)
-            print(mu)
+
             # tiny diagnostic panel
             if diag and (k % diag_every == 0) and (plotted < max_diag):
                 ax = axd[plotted]; plotted += 1
@@ -355,6 +404,9 @@ def peak_value_for_each_radius(
 
             plt.show()
 
+
+        #### This parts saves the images, and the positions and velocities of all relevant data points.
+        #### This is done after the Gaussian is fit to the PV cut.
         pv_list.append(img)
         radii_list.append(radial_deg[x_sel]*60.0)  # arcmin
         vaxis_list.append(vel_kms)
@@ -383,33 +435,37 @@ def peak_value_for_each_radius(
     ax2.set_xlabel("Offset [arcmin]"); ax2.set_ylabel("Velocity [km/s]")
     ax2.set_ylim(plot_vmin_kms, plot_vmax_kms); ax2.set_title("center_b")
 
-    v_lsr = vtrace_list[0][0]+1e-3
+    v_lsr = vtrace_list[0][0]
 
     print('velocity centroid: ',v_lsr)
     ax3 = plt.subplot(133)
 
     # Build |V - Vlsr| (you already have v_lsr)
-    dv_r = np.abs(vtrace_list[0] - v_lsr)
-    dv_b = np.abs(vtrace_list[1] - v_lsr)
+    dv_r = np.abs(vtrace_list[0][1:] - v_lsr)
+    dv_b = np.abs(vtrace_list[1][1:] - v_lsr)
 
     # Convert radii to AU (your current recipe)
     dpc = 130
-    r_r_au = (radii_list[0] + 4e-2) * 60.0 * dpc
-    r_b_au = (radii_list[1] + 4e-2) * 60.0 * dpc
+    r_r_au = (radii_list[0][1:]) * 60.0 * dpc
+    r_b_au = (radii_list[1][1:]) * 60.0 * dpc
+
+    verr_list_r=verr_list[0][1:]
+    verr_list_b=verr_list[1][1:]
 
     # Plot points with error bars (centroid errors are also δV errors)
-    ax3.errorbar(r_r_au, dv_r, yerr=verr_list[0], fmt='o', ms=5, capsize=2,mec='k',
+    ax3.errorbar(r_r_au, dv_r, yerr=verr_list_r, fmt='o', ms=5, capsize=2,mec='k',
                  color=colors[1], label='center_r data')
-    ax3.errorbar(r_b_au, dv_b, yerr=verr_list[1], fmt='o', ms=5, capsize=2,mec='k',
+    ax3.errorbar(r_b_au, dv_b, yerr=verr_list_b, fmt='o', ms=5, capsize=2,mec='k',
                  color=colors[0], label='center_b data')
 
     # Log scales
-    ax3.set_xscale("log")
-    ax3.set_yscale("log")
+    # ax3.set_xscale("log")
+    # ax3.set_yscale("log")
 
     # --- NEW: fit power laws on the same axes and draw the lines ---
-    fit_red = fit_powerlaw_and_plot(ax3, r_r_au, dv_r, yerr=verr_list[0], color=colors[1], label='center_r')
-    fit_blue = fit_powerlaw_and_plot(ax3, r_b_au, dv_b, yerr=verr_list[1], color=colors[0], label='center_b')
+    fit_red = fit_powerlaw_and_plot(ax3, r_r_au, dv_r, yerr=verr_list_r, color=colors[1], label='center_r')
+    fit_blue = fit_powerlaw_and_plot(ax3, r_b_au, dv_b, yerr=verr_list_b, color=colors[0], label='center_b')
+
 
     ax3.set_xlabel("Radial offset [au]")
     ax3.set_ylabel(r"$\delta V$ [km/s]")
@@ -435,6 +491,9 @@ def peak_value_for_each_radius(
                     bbox_inches='tight',dpi=300)
 
     plt.show()
+
+    save_entry('cores_parameters.txt', source_name, molecule, 'red', fit_red, r_r_au, dv_r, verr_list_r )
+    save_entry('cores_parameters.txt', source_name, molecule, 'blue', fit_blue, r_b_au, dv_b, verr_list_b)
 
     return {
         'radii_arcmin': radii_list,
@@ -516,18 +575,18 @@ def fit_powerlaw_and_plot(ax, x, y, yerr=None, color='C0', label=''):
 
 # --- example ---
 if __name__ == "__main__":
-    core = 'M508'
+    core = 'M493'
     molecule = 'C18O'
     angle = 136.8 #-25
-    vel_range = [5.0, 8.0]
+    vel_range = [6.6, 8.0]
 
     peak_value_for_each_radius(
         core, molecule, angle, vel_range,
         plot_vel_range=None,
         beam_arcsec=28.0,
-        nyquist_factor=0.5,  # 14"
+        nyquist_factor=0.50,  # 14"
         diag=True,           # quick visual check
         diag_every=1,        # every 2nd column
-        max_diag=12,
-        save=True
+        max_diag=16,
+        save=False
     )
