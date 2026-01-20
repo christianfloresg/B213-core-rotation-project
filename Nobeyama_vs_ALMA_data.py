@@ -118,17 +118,53 @@ def show_spatial_location_of_spectra(large_map, coordinate_file,source_name,radi
     velocity = data_cube.vel/1e3 ## from m/s to km/s
     velocity_resolution = data_cube.velocity_resolution/1e3  ## from m/s to km/s
 
+    print('velocity res', velocity_resolution)
     #### Compute moment zero map
-    lower_idx, upper_idx = closest_idx(velocity, 4.8), closest_idx(velocity, 7.0)
-    moment_0_map = np.max(image[lower_idx:upper_idx,:,:], axis=0)
+
+    RMS = 0.12 ## for H13CO+
+    vmin=4.7
+    vmax=7.7
+    threshold = RMS*3
+
+    # RMS = 0.22 ## for HCO+/
+    # vmin=4.5
+    # vmax=8.9
+    # threshold = RMS*5
+
+    # RMS = 0.35 ## for C18O
+    # vmin=4.3
+    # vmax=7.5
+    # threshold = RMS*5
+
+    lower_idx, upper_idx = closest_idx(velocity, vmin), closest_idx(velocity, vmax)
+    cube = image[lower_idx:upper_idx]
+    vel = velocity[lower_idx:upper_idx]
+
+
+    mom_one_threshold = threshold * velocity_resolution * ((vmax - vmin)/velocity_resolution)**0.5 ## -> TRMSx dv x N**0.5
+
+    moment_0_map = np.nansum(cube, axis=0)*velocity_resolution
+
+    moment_1_map = (np.nansum(cube * vel[:, None, None], axis=0) / moment_0_map) *velocity_resolution
+
+    moment_1_map[moment_0_map < mom_one_threshold] = np.nan ### only consider emission above 3 sigma from moment 0
+
     max_map = np.nanmax(moment_0_map)*0.3
-    min_map = np.nanmin(moment_0_map)
+    min_map = mom_one_threshold
 
     #### Plot the map
     fig = plt.figure(figsize=(6,6))
     fig1 = fig.add_subplot(111, projection=data_cube.wcs, slices=('x','y',150))
-    unique_moment_0_val = np.unique(moment_0_map)
-    mom0_im = fig1.imshow(moment_0_map, cmap="viridis", origin='lower', vmin=min_map,vmax=max_map)
+
+    ## "viridis"
+    ## "cividis"
+    # mom0_im = fig1.imshow(moment_0_map, cmap="viridis", origin='lower', vmin=min_map,vmax=max_map)
+    # cbar = fig.colorbar(mom0_im, ax=fig1, pad=0.05)
+    # cbar.set_label("K km s$^{-1}$")
+
+    mom1_im = fig1.imshow(moment_1_map, cmap="rainbow", origin='lower', vmin=4.5,vmax=7.5)
+    cbar = fig.colorbar(mom1_im, ax=fig1, pad=0.05)
+    cbar.set_label("Velocity (km s$^{-1}$)")
 
     ### Change the limits
     pixel_limits_ra = 250
@@ -156,12 +192,25 @@ def show_spatial_location_of_spectra(large_map, coordinate_file,source_name,radi
 
         s = SphericalCircle(skycoord_object, aperture_radius * u.arcsec,
                             edgecolor='red', facecolor='none',
-                            transform=fig1.get_transform('fk5'), linewidth=2, linestyle='-')
+                            transform=fig1.get_transform('fk5'), linewidth=1, linestyle='-')
         fig1.add_patch(s)
+
+
+        fig1.text(
+            skycoord_object.ra.deg,
+            skycoord_object.dec.deg,
+            name,
+            color='red',
+            fontsize=10,
+            ha='left',
+            va='bottom',
+            transform=fig1.get_transform('fk5')
+        )
+
     plt.show()
 
-    filename='Nobeyama_'+molecule+'_source_locations.png'
-    fig.savefig(os.path.join('Figures/Nobeyama/',filename),dpi=300, bbox_inches='tight')
+    # filename='Nobeyama_'+molecule+'_source_locations_mom0.png'
+    # fig.savefig(os.path.join('Figures/Nobeyama/',filename),dpi=300, bbox_inches='tight')
 
 def read_source_positions(text_file):
     '''
@@ -188,12 +237,12 @@ if __name__ == "__main__":
     #                                coordinate_file='Herschel_coordinates_from_ALMA.txt',
     #                                source_name=source, molecule=molecule,save=True)
     folder_fits = 'TP_FITS'
-    molecule_Nobeyama='CN'
-    mass_produce_spectral_comparison(large_map=molecule_Nobeyama+'_2022-2024_01kms_spheroidal_xyb_base.fits',
-                                   coordinate_file='Herschel_coordinates_from_ALMA.txt',
-                                     folders_path=folder_fits, molecule_Nobeyama=molecule_Nobeyama
-                                     ,molecule_ALMA='C18O')
+    molecule_Nobeyama='H13COp'
+    # mass_produce_spectral_comparison(large_map=molecule_Nobeyama+'_2022-2024_01kms_spheroidal_xyb_base.fits',
+    #                                coordinate_file='Herschel_coordinates_from_ALMA.txt',
+    #                                  folders_path=folder_fits, molecule_Nobeyama=molecule_Nobeyama
+    #                                  ,molecule_ALMA='C18O')
 
-    # show_spatial_location_of_spectra(large_map=molecule_Nobeyama+'_2022-2024_01kms_spheroidal_xyb_base.fits',
-    #                                coordinate_file='Herschel_coordinates_from_ALMA.txt',source_name='M262',
-    #                                  molecule=molecule_Nobeyama)
+    show_spatial_location_of_spectra(large_map=molecule_Nobeyama+'_2022-2024_01kms_spheroidal_xyb_base.fits',
+                                   coordinate_file='Herschel_coordinates_from_ALMA.txt',source_name='M262',
+                                     molecule=molecule_Nobeyama)
