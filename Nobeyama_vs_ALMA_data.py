@@ -11,6 +11,50 @@ from astropy.visualization.wcsaxes import SphericalCircle
 from astropy.visualization.wcsaxes import WCSAxes
 from astropy.wcs.utils import pixel_to_skycoord
 
+def overplot_skeleton_map(ax, skeleton_fits_path,
+                          level=0.5, color='k', linewidth=1.5, alpha=1.0):
+    """
+    Read a 2D (or squeezable-to-2D) FITS skeleton map (0/1) and overplot it on an
+    existing WCSAxes using correct sky-coordinate alignment.
+
+    Parameters
+    ----------
+    ax : astropy.visualization.wcsaxes.WCSAxes
+        The axes returned by fig.add_subplot(..., projection=data_cube.wcs, ...)
+    skeleton_fits_path : str
+        Path to the 2D FITS skeleton file.
+    level : float
+        Contour level to draw the skeleton. For 0/1 masks, 0.5 is ideal.
+    color : str
+        Contour color.
+    linewidth : float
+        Contour line width.
+    alpha : float
+        Contour alpha.
+    """
+    from astropy.io import fits
+    from astropy.wcs import WCS
+    import numpy as np
+
+    with fits.open(skeleton_fits_path) as hdul:
+        hdu = hdul[0]
+        skel_data = np.squeeze(hdu.data)
+        skel_wcs = WCS(hdu.header).celestial
+
+    if skel_data.ndim != 2:
+        raise ValueError(
+            f"Skeleton FITS must be 2D after squeeze; got shape {skel_data.shape}"
+        )
+
+    # Draw only the "spine" boundary between 0 and 1
+    ax.contour(
+        skel_data,
+        levels=[level],
+        colors=[color],
+        linewidths=linewidth,
+        alpha=alpha,
+        transform=ax.get_transform(skel_wcs),
+    )
 
 def mass_produce_spectral_comparison(large_map, coordinate_file,folders_path,molecule_Nobeyama,molecule_ALMA):
     '''
@@ -121,20 +165,28 @@ def show_spatial_location_of_spectra(large_map, coordinate_file,source_name,radi
     print('velocity res', velocity_resolution)
     #### Compute moment zero map
 
-    RMS = 0.12 ## for H13CO+
-    vmin=4.7
-    vmax=7.7
-    threshold = RMS*3
+    # RMS = 0.12 ## for H13CO+
+    # vmin=4.7
+    # vmax=7.7
+    # threshold = RMS*3
 
     # RMS = 0.22 ## for HCO+/
     # vmin=4.5
     # vmax=8.9
     # threshold = RMS*5
 
-    # RMS = 0.35 ## for C18O
+    RMS = 0.35 ## for C18O
+
     # vmin=4.3
-    # vmax=7.5
-    # threshold = RMS*5
+    # vmax=5.3
+
+    # vmin=5.4
+    # vmax=6.3
+
+    vmin=6.3
+    vmax=7.2
+
+    threshold = RMS*5
 
     lower_idx, upper_idx = closest_idx(velocity, vmin), closest_idx(velocity, vmax)
     cube = image[lower_idx:upper_idx]
@@ -162,9 +214,13 @@ def show_spatial_location_of_spectra(large_map, coordinate_file,source_name,radi
     # cbar = fig.colorbar(mom0_im, ax=fig1, pad=0.05)
     # cbar.set_label("K km s$^{-1}$")
 
-    mom1_im = fig1.imshow(moment_1_map, cmap="rainbow", origin='lower', vmin=4.5,vmax=7.5)
+    mom1_im = fig1.imshow(moment_1_map, cmap="rainbow", origin='lower', vmin=4.3,vmax=7.2)
     cbar = fig.colorbar(mom1_im, ax=fig1, pad=0.05)
     cbar.set_label("Velocity (km s$^{-1}$)")
+
+    ### plot skeleton
+    overplot_skeleton_map(fig1, skeleton_fits_path='do-not-save/HGBS_tauN3_skeleton_map.fits',
+                          level=0.5, color='k', linewidth=1.5, alpha=1.0)
 
     ### Change the limits
     pixel_limits_ra = 250
@@ -237,7 +293,8 @@ if __name__ == "__main__":
     #                                coordinate_file='Herschel_coordinates_from_ALMA.txt',
     #                                source_name=source, molecule=molecule,save=True)
     folder_fits = 'TP_FITS'
-    molecule_Nobeyama='H13COp'
+    # molecule_Nobeyama='H13COp'
+    molecule_Nobeyama = 'C18O'
     # mass_produce_spectral_comparison(large_map=molecule_Nobeyama+'_2022-2024_01kms_spheroidal_xyb_base.fits',
     #                                coordinate_file='Herschel_coordinates_from_ALMA.txt',
     #                                  folders_path=folder_fits, molecule_Nobeyama=molecule_Nobeyama

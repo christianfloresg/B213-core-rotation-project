@@ -9,6 +9,20 @@ today = str(date.today())
 currentDateAndTime = datetime.now()
 hour_now = str(currentDateAndTime.hour)
 
+
+def histogram_to_pdf(counts, bin_width):
+    counts = np.asarray(counts)
+    pdf = counts / (counts.sum() * bin_width)
+    return pdf
+
+def compute_histogram(values, bin_centers, bin_width):
+    edges = np.concatenate([
+        bin_centers - bin_width / 2,
+        [bin_centers[-1] + bin_width / 2]
+    ])
+    counts, _ = np.histogram(values, bins=edges)
+    return counts
+
 def read_data(filepath):
     return pd.read_csv(filepath)
 
@@ -61,7 +75,7 @@ def plot_histogram(values, bin_size=0.5,save=False):
     )
 
     plt.figure(figsize=(7, 4.5))
-    plt.hist(values, bins=bins, edgecolor="black")
+    plt.hist(values, bins=bins, edgecolor="black",color='C1')
     plt.xlabel("Δalpha = alpha_b − alpha_r",size=16)
     plt.ylabel("Number of cores per bin",size=16)
     plt.title("C18O Δalpha histogram")
@@ -75,7 +89,24 @@ def plot_histogram(values, bin_size=0.5,save=False):
     plt.show()
 
 
-def main(filepath, bin_size=0.5,save=False):
+def plot_pdf_comparison(bin_centers, pdf_sim, pdf_obs,save=False):
+    plt.figure(figsize=(7, 4.5))
+    plt.step(bin_centers, pdf_obs, where="mid", label="Observation",linewidth=2,color='C1')
+    plt.step(bin_centers, pdf_sim, where="mid", label="Simulation",linewidth=2,color='gray')
+    plt.xlabel("Δalpha",size=16)
+    plt.ylabel("Probability density",size=16)
+    plt.legend()
+    plt.tight_layout()
+    plt.tick_params(axis="both", labelsize=14)
+
+    fig_path = os.path.join(Path(outdir),'histogram_comparison_delta_alpha'+"_"+today+".png")
+    if save:
+        plt.savefig(fig_path, dpi=150)
+
+    plt.show()
+
+
+def main_plot_his_data(filepath, bin_size=0.5,save=False):
     df = read_data(filepath)
     df = filter_c18o(df)
     df = add_slope_kind(df)
@@ -83,6 +114,26 @@ def main(filepath, bin_size=0.5,save=False):
     plot_histogram(delta_alpha, bin_size,save=save)
 
 
+def main_compare_pdf(filepath, bin_width = 0.5,save=False):
+
+    df = read_data(filepath)
+    df = filter_c18o(df)
+    df = add_slope_kind(df)
+    delta_alpha = compute_delta_alpha(df)
+
+    sim_bin_centers = np.array([-1.25, -0.75, -0.25, 0.25, 0.75, 1.25])
+    sim_counts = np.array([1, 3, 13, 18, 4, 1])  # approximate from image
+
+
+    sim_pdf = histogram_to_pdf(sim_counts, bin_width)
+
+    obs_counts = compute_histogram(delta_alpha, sim_bin_centers, bin_width)
+    obs_pdf = histogram_to_pdf(obs_counts, bin_width)
+
+    plot_pdf_comparison(sim_bin_centers, sim_pdf, obs_pdf,save=save)
+
 if __name__ == "__main__":
     outdir='Figures'
-    main("cores_slopes.csv", bin_size=0.5,save=True)
+
+    # main_plot_his_data("cores_slopes.csv", bin_size=0.5,save=True)
+    main_compare_pdf("cores_slopes.csv",bin_width = 0.5,save=True)
